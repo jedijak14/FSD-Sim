@@ -95,9 +95,12 @@ async function main() {
 
   let exterior = null;
   try {
-    const gltf = await new Promise((res, rej) => {
-      new GLTFLoader().load('assets/source/tesla_white_car_.glb', res, undefined, rej);
-    });
+    const gltf = await Promise.race([
+      new Promise((res, rej) => {
+        new GLTFLoader().load('assets/source/tesla_white_car_.glb', res, undefined, rej);
+      }),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('GLB load timeout')), 15000))
+    ]);
     exterior = gltf.scene;
     exterior.scale.set(0.9, 0.9, 0.9);
     exterior.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
@@ -105,7 +108,7 @@ async function main() {
     exterior.visible = false;
     scene.add(exterior);
   } catch (e) {
-    console.warn('GLB load failed, using smooth proxy:', e);
+    console.warn('GLB load failed/timeout, using smooth proxy:', e);
   }
 
   // ---------- interior ----------
