@@ -254,16 +254,16 @@ export function updateInterior(refs, state) {
 
   // screen glow matches drive mode
   if (screenGlow) {
-    let g = 0.02, h = 0.98;
-    if (state.gear === 'D') { g = 0.04; h = 0.90; }
-    else if (state.gear === 'R') { g = 0.08; h = 0.95; }
+    let g = 0.02, hex = 0x1a0000;
+    if (state.gear === 'D') { g = 0.04; hex = 0x1a001a; }
+    else if (state.gear === 'R') { g = 0.08; hex = 0x33001a; }
     screenGlow.material.opacity = THREE.MathUtils.lerp(screenGlow.material.opacity, g, 0.06);
-    screenGlow.material.color.setHsl(h, 0.9, state.gear === 'R' ? 0.30 : 0.14);
+    screenGlow.material.color.setHex(hex);
   }
 
   // footwell pulse
   if (footwell) {
     footwell.material.opacity = THREE.MathUtils.lerp(footwell.material.opacity, state.gear !== 'P' ? 0.10 : 0.02, 0.05);
-    footwell.material.color.setHsl(0.98, 0.9, 0.25);
+    footwell.material.color.setHex(0x2a0000);
   }
 }
