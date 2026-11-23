@@ -18,6 +18,15 @@
 <!-- GAME CANVAS                                                  -->
 <!-- ============================================================ -->
 <canvas id="glcanvas" tabindex="0"></canvas>
+<div id="errorOverlay" style="
+  position:fixed; inset:0; z-index:99999; background:#000; color:#fff;
+  display:none; align-items:center; justify-content:center; flex-direction:column;
+  font-family:'SF Pro Display',system-ui,-apple-system,sans-serif; padding:32px;
+  text-align:center; gap:16px;">
+  <div style="color:#e50914; font-size:2rem; font-weight:700">FSD-SIM ERROR</div>
+  <div id="errorMsg" style="font-size:1rem; color:#ccc; max-width:600px; line-height:1.5"></div>
+  <button id="errorReload" style="padding:10px 20px; background:#e50914; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600">Reload</button>
+</div>
 
 <!-- ============================================================ -->
 <!-- HUD OVERLAY (speed, gear, autopilot status)                  -->

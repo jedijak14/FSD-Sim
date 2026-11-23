@@ -324,4 +324,11 @@ async function main() {
   showNote('FSD-Sim ready. W/S drive · A/D steer · C camera · 1/2/3 Autopilot · P Autopark · T Tesla UI · L blinker');
 }
 
-main().catch(err => { console.error(err); });
+main().catch(err => {
+  console.error(err);
+  const ov = document.getElementById('errorOverlay');
+  const msg = document.getElementById('errorMsg');
+  if (ov) { ov.style.display = 'flex'; }
+  if (msg) { msg.textContent = err?.message || String(err); }
+  document.getElementById('errorReload')?.addEventListener('click', () => location.reload());
+});
