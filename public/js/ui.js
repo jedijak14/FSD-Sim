@@ -1,5 +1,6 @@
 /* ============================================================
-   FSD-Sim — Tesla UI (center screen replica + apps)
+   FSD-Sim — Tesla UI (center screen + apps)
+   Authentic Tesla-style center display. All apps functional.
    ============================================================ */
 export class TeslaUI {
   constructor() {
@@ -16,6 +17,9 @@ export class TeslaUI {
       service: 'spotify',
       progress: 0
     };
+    this.climate = { driver: 72, passenger: 72, ac: false, seatHeatD: 0, seatHeatP: 0, defrost: false };
+    this.settings = { autopilot: false, fsd: false, speedAssist: true, units: 'mph', stopping: 'Hold', steering: 'Comfort' };
+    this.version = '2024.38.12';
     this._bindShell();
     this._renderPages();
     this._bindApps();
@@ -24,20 +28,23 @@ export class TeslaUI {
   }
 
   openUI() { this.root.classList.add('open'); this.root.classList.remove('closing'); this.open = true; this.root.setAttribute('aria-hidden', 'false'); }
-  closeUI() { this.root.classList.add('closing'); setTimeout(() => { this.root.classList.remove('open', 'closing'); this.open = false; this.root.setAttribute('aria-hidden', 'true'); this.closeModal(); }, 280); }
+  closeUI() {
+    this.root.classList.add('closing');
+    setTimeout(() => {
+      this.root.classList.remove('open', 'closing');
+      this.open = false;
+      this.root.setAttribute('aria-hidden', 'true');
+      this.closeModal();
+    }, 280);
+  }
   toggle() { this.open ? this.closeUI() : this.openUI(); }
 
-  // ---------- shell ----------
   _bindShell() {
     document.getElementById('btnCloseUI').onclick = () => this.closeUI();
-    document.getElementById('btnNav').onclick = () => this.showPage('nav');
-    document.getElementById('btnMedia').onclick = () => this.showPage('media');
-    document.getElementById('btnPhone').onclick = () => this.showPage('phone');
-    document.getElementById('btnTheater').onclick = () => this.showPage('theater');
-    document.getElementById('btnBrowser').onclick = () => this.showPage('browser');
-    document.getElementById('btnClimate').onclick = () => this.showPage('climate');
-    document.getElementById('btnControls').onclick = () => this.showPage('controls');
-    document.getElementById('btnSettings').onclick = () => this.showPage('settings');
+    const apps = { nav:'btnNav', media:'btnMedia', phone:'btnPhone', theater:'btnTheater', browser:'btnBrowser', climate:'btnClimate', controls:'btnControls', settings:'btnSettings' };
+    Object.entries(apps).forEach(([name, id]) => {
+      document.getElementById(id).onclick = () => this.showPage(name);
+    });
     this.modalClose.onclick = () => this.closeModal();
     this.modal.onclick = (e) => { if (e.target === this.modal) this.closeModal(); };
     document.getElementById('miniPlay').onclick = () => this.toggleMedia();
@@ -45,11 +52,9 @@ export class TeslaUI {
   }
 
   showPage(name) {
-    // highlight app bar
-    const map = { nav:'btnNav', media:'btnMedia', phone:'btnPhone', theater:'btnTheater', browser:'btnBrowser', climate:'btnClimate', controls:'btnControls', settings:'btnSettings' };
-    Object.values(map).forEach(id => document.getElementById(id).classList.remove('active'));
-    if (map[name]) document.getElementById(map[name]).classList.add('active');
-    // pages
+    const apps = { nav:'btnNav', media:'btnMedia', phone:'btnPhone', theater:'btnTheater', browser:'btnBrowser', climate:'btnClimate', controls:'btnControls', settings:'btnSettings' };
+    Object.values(apps).forEach(id => document.getElementById(id).classList.remove('active'));
+    if (apps[name]) document.getElementById(apps[name]).classList.add('active');
     this.content.querySelectorAll('.app-page').forEach(p => p.classList.remove('active'));
     const page = document.getElementById('page-' + name);
     if (page) page.classList.add('active');
@@ -63,7 +68,6 @@ export class TeslaUI {
     this.modal.classList.add('open');
   }
 
-  // ---------- clock ----------
   _startClock() {
     const tick = () => {
       const now = new Date();
@@ -73,7 +77,6 @@ export class TeslaUI {
     tick();
   }
 
-  // ---------- media ----------
   toggleMedia() { this.media.playing = !this.media.playing; this._refreshMini(); }
   setMedia(service, track, artist) {
     this.media.service = service; this.media.track = track; this.media.artist = artist; this.media.playing = true;
@@ -81,13 +84,20 @@ export class TeslaUI {
     if (this.open) this.showPage('media');
   }
   _refreshMini() {
-    document.getElementById('miniTrack').textContent = this.media.playing ? this.media.track : 'Paused';
-    document.getElementById('miniArtist').textContent = this.media.artist;
-    document.getElementById('miniPlay').textContent = this.media.playing ? '⏸' : '▶';
+    const elTrack = document.getElementById('miniTrack');
+    const elArtist = document.getElementById('miniArtist');
+    const elPlay = document.getElementById('miniPlay');
+    if (elTrack) elTrack.textContent = this.media.playing ? this.media.track : 'Paused';
+    if (elArtist) elArtist.textContent = this.media.artist;
+    if (elPlay) elPlay.textContent = this.media.playing ? '⏸' : '▶';
+    const elTitle = document.getElementById('mediaTitle');
+    const elSub = document.getElementById('mediaSub');
+    if (elTitle) elTitle.textContent = this.media.track;
+    if (elSub) elSub.textContent = this.media.artist;
   }
   _mediaLoop() {
     if (this.media.playing) {
-      this.media.progress += 0.5;
+      this.media.progress += 0.35;
       if (this.media.progress > 100) this.media.progress = 0;
       const el = document.getElementById('mediaProgFill');
       if (el) el.style.width = this.media.progress + '%';
@@ -95,10 +105,9 @@ export class TeslaUI {
     requestAnimationFrame(() => this._mediaLoop());
   }
 
-  // ---------- page rendering ----------
   _renderPages() {
     this.content.innerHTML = `
-    <div class="app-page" id="page-nav">
+    <div class="app-page active" id="page-nav">
       <div class="page-title">Navigation</div>
       <div class="tile-grid">
         <div class="tile" onclick="UI.setRoute('Home')"><div class="t-icon">🏠</div><div class="t-label">Home</div></div>
@@ -112,7 +121,7 @@ export class TeslaUI {
       </div>
     </div>
 
-    <div class="app-page active" id="page-media">
+    <div class="app-page" id="page-media">
       <div class="page-title">Media</div>
       <div class="media-player">
         <div class="media-art" id="mediaArt">🎵</div>
@@ -174,7 +183,7 @@ export class TeslaUI {
 
     <div class="app-page" id="page-climate">
       <div class="page-title">Climate</div>
-      <div style="display:flex;gap:16px;">
+      <div style="display:flex;gap:18px;">
         <div style="flex:1;display:flex;flex-direction:column;align-items:center;">
           <div style="font-size:2.6rem;font-weight:700;color:#fff" id="climateTemp">72°</div>
           <div style="font-size:.9rem;color:var(--tesla-text-dim);margin-top:6px">Driver</div>
@@ -213,21 +222,20 @@ export class TeslaUI {
     <div class="app-page" id="page-settings">
       <div class="page-title">Settings</div>
       <div class="settings-list">
-        <div class="setting-row"><label>Autopilot</label><div class="toggle" id="togAutopilot" onclick="UI.toggleSetting('autopilot')"></div></div>
-        <div class="setting-row"><label>FSD Beta</label><div class="toggle" id="togFSD" onclick="UI.toggleSetting('fsd')"></div></div>
-        <div class="setting-row"><label>Speed Limit Assist</label><div class="toggle" id="togSpeed" onclick="UI.toggleSetting('speed')"></div></div>
-        <div class="setting-row"><label>Stopping Mode</label><span class="val" style="cursor:pointer" onclick="UI.cycleStopping()">Hold</span></div>
-        <div class="setting-row"><label>Steering Mode</label><span class="val" style="cursor:pointer" onclick="UI.cycleSteering()">Comfort</span></div>
-        <div class="setting-row"><label>Units</label><span class="val" style="cursor:pointer" onclick="UI.toggleUnits()">mph</span></div>
+        <div class="setting-row"><label>Autopilot</label><div class="toggle ${this.settings.autopilot?'on':''}" id="togAutopilot" onclick="UI.toggleSetting('autopilot')"></div></div>
+        <div class="setting-row"><label>FSD Beta</label><div class="toggle ${this.settings.fsd?'on':''}" id="togFSD" onclick="UI.toggleSetting('fsd')"></div></div>
+        <div class="setting-row"><label>Speed Limit Assist</label><div class="toggle ${this.settings.speedAssist?'on':''}" id="togSpeed" onclick="UI.toggleSetting('speed')"></div></div>
+        <div class="setting-row"><label>Stopping Mode</label><span class="val" style="cursor:pointer" onclick="UI.cycleStopping()">${this.settings.stopping}</span></div>
+        <div class="setting-row"><label>Steering Mode</label><span class="val" style="cursor:pointer" onclick="UI.cycleSteering()">${this.settings.steering}</span></div>
+        <div class="setting-row"><label>Units</label><span class="val" style="cursor:pointer" onclick="UI.toggleUnits()">${this.settings.units}</span></div>
         <div class="setting-row"><label>Display Brightness</label><span class="val">90%</span></div>
         <div class="setting-row"><label>Language</label><span class="val">English</span></div>
-        <div class="setting-row"><label>Software</label><span class="val" style="cursor:pointer" onclick="UI.checkUpdate()">2024.38.12</span></div>
+        <div class="setting-row"><label>Software</label><span class="val" style="cursor:pointer" onclick="UI.checkUpdate()">${this.version}</span></div>
       </div>
     </div>
     `;
   }
 
-  // ---------- app actions ----------
   setRoute(dest) {
     document.getElementById('navRoute').textContent = `Navigating to ${dest}…`;
     this.alert('Navigation', `Setting route to <b>${dest}</b>. Estimated arrival in <b>12 min</b>.<br>FSD will follow the route, stop at signals and yield to traffic.`);
@@ -244,7 +252,7 @@ export class TeslaUI {
   dial(tab) { this.alert('Phone', `Opened <b>${tab}</b>. Contacts sync with your paired phone. Tap a number to call via the car speaker.`); }
 
   launchTheater(name, url) {
-    this.alert(`${name} Theater`, `<b>${name}</b> would open full-screen here.<br><br>Note: most streaming services (Netflix, Disney+, Hulu, HBO Max, YouTube) block embedding in third-party iframes for DRM/rights reasons, so in a real car they run in Tesla's own Chromium-based Theater app. In this sim, tap <b>Go</b> below to open the site in the Web Browser app instead.`);
+    this.alert(`${name} Theater`, `<b>${name}</b> would open full-screen here.<br><br>Note: most streaming services block embedding in third-party iframes for DRM/rights reasons, so in a real car they run in Tesla's own Chromium-based Theater app. In this sim, open the site in the Web Browser app instead.`);
   }
 
   goBrowser() {
@@ -256,11 +264,11 @@ export class TeslaUI {
     frame.src = u;
   }
 
-  adjustTemp(d) { const el = document.getElementById('climateTemp'); const v = parseInt(el.textContent) + d; el.textContent = v + '°'; }
-  adjustTemp2(d) { const el = document.getElementById('climateTemp2'); const v = parseInt(el.textContent) + d; el.textContent = v + '°'; }
-  toggleAC() { this._toast('A/C toggled'); }
-  toggleSeatHeat(s) { this._toast(`Seat heat ${s === 'driver' ? 'driver' : 'passenger'} toggled`); }
-  toggleDefrost() { this._toast('Defrost on'); }
+  adjustTemp(d) { const el = document.getElementById('climateTemp'); const v = Math.round(parseInt(el.textContent) + d); el.textContent = v + '°'; this.climate.driver = v; }
+  adjustTemp2(d) { const el = document.getElementById('climateTemp2'); const v = Math.round(parseInt(el.textContent) + d); el.textContent = v + '°'; this.climate.passenger = v; }
+  toggleAC() { this.climate.ac = !this.climate.ac; this._toast(`A/C ${this.climate.ac ? 'on' : 'off'}`); }
+  toggleSeatHeat(s) { this.climate[s === 'driver' ? 'seatHeatD' : 'seatHeatP'] = (this.climate[s === 'driver' ? 'seatHeatD' : 'seatHeatP'] + 1) % 3; this._toast(`Seat heat ${s === 'driver' ? 'driver' : 'passenger'} level ${this.climate[s === 'driver' ? 'seatHeatD' : 'seatHeatP']}`); }
+  toggleDefrost() { this.climate.defrost = !this.climate.defrost; this._toast('Defrost ' + (this.climate.defrost ? 'on' : 'off')); }
   toggleLock() { this._toast('Doors locked'); }
   toggleFrunk() { this._toast('Frunk opened'); }
   toggleTrunk() { this._toast('Trunk opened'); }
@@ -270,20 +278,19 @@ export class TeslaUI {
     const els = { autopilot:'togAutopilot', fsd:'togFSD', speed:'togSpeed' };
     const el = document.getElementById(els[key]);
     const on = el.classList.toggle('on');
+    this.settings[key] = on;
     this._toast(`${key} ${on ? 'on' : 'off'}`);
     if (window.GAME) {
       if (key === 'autopilot') window.GAME.setDriveMode(on ? 1 : 0);
       if (key === 'fsd') window.GAME.setDriveMode(on ? 2 : (window.GAME.autopilot.mode === 2 ? 0 : window.GAME.autopilot.mode));
-      if (key === 'speed') { /* speed limit assist */ }
     }
   }
-  cycleStopping() { this._toast('Stopping Mode: Hold'); }
-  cycleSteering() { this._toast('Steering Mode: Comfort'); }
-  toggleUnits() { this._toast('Units: mph'); }
-  checkUpdate() { this.alert('Software', 'Your software is up to date. Version 2024.38.12'); }
+  cycleStopping() { const m = ['Hold','Roll','Creep']; const i = m.indexOf(this.settings.stopping); this.settings.stopping = m[(i+1)%m.length]; document.getElementById('page-settings') && this._renderPages(); this._toast(`Stopping Mode: ${this.settings.stopping}`); }
+  cycleSteering() { const m = ['Comfort','Standard','Sport']; const i = m.indexOf(this.settings.steering); this.settings.steering = m[(i+1)%m.length]; this._toast(`Steering Mode: ${this.settings.steering}`); }
+  toggleUnits() { this.settings.units = this.settings.units === 'mph' ? 'km/h' : 'mph'; this._toast(`Units: ${this.settings.units}`); }
+  checkUpdate() { this.alert('Software', 'Your software is up to date. Version ' + this.version); }
 
   _toast(msg) { if (window.GAME) window.GAME.notify(msg); }
 
-  // resize browser iframe container
   _resizeBrowser() {}
 }

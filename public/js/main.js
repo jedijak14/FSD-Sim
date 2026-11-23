@@ -1,20 +1,47 @@
 /* ============================================================
-   FSD-Sim — Main entry
-   Real-time Tesla Model 3 simulator.
-   Built on three.js. Not affiliated with Tesla, Inc.
+   FSD-Sim — Tesla Model 3 Simulator
+   Real-time driving game. Not affiliated with Tesla, Inc.
    ============================================================ */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { Audio } from './audio.js';
 import { buildInterior, updateInterior } from './interior.js';
 import { buildWorld, updateWorld, nearestAhead, signalAhead } from './world.js';
 import { Autopilot, DriveMode } from './fsd.js';
 import { TeslaUI } from './ui.js';
 
-// ---------- loading UI ----------
+// ---------- vignette / film grain shader ----------
+const VignetteShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    opacity: { value: 0.55 },
+    vignette: { value: 0.85 }
+  },
+  vertexShader: `
+    varying vec2 vUv;
+    void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
+  `,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    uniform float opacity;
+    uniform float vignette;
+    varying vec2 vUv;
+    void main() {
+      vec4 color = texture2D(tDiffuse, vUv);
+      float dist = distance(vUv, vec2(0.5));
+      color.rgb *= mix(vec3(1.0), vec3(0.0), smoothstep(0.0, vignette, dist) * opacity);
+      gl_FragColor = color;
+    }
+  `
+};
+
 const loadFill = document.getElementById('loadFill');
 const loadText = document.getElementById('loadText');
-function setLoad(p, t) { loadFill.style.width = p + '%'; if (t) loadText.textContent = t; }
+function setLoad(p, t) { if (loadFill) loadFill.style.width = p + '%'; if (t && loadText) loadText.textContent = t; }
 
 window.GAME = null;
 
@@ -29,86 +56,83 @@ async function main() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = 1.2;
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x080a0f);
-  scene.fog = new THREE.FogExp2(0x080a0f, 0.0018);
+  scene.fog = new THREE.FogExp2(0x080a0f, 0.0015);
 
   // ---------- lights ----------
-  const ambient = new THREE.AmbientLight(0xffffff, 0.45);
+  const ambient = new THREE.AmbientLight(0xffffff, 0.5);
   scene.add(ambient);
-  const dir = new THREE.DirectionalLight(0xffffff, 1.1);
-  dir.position.set(-40, 60, 20);
+  const dir = new THREE.DirectionalLight(0xffffff, 1.3);
+  dir.position.set(-50, 70, 30);
   dir.castShadow = true;
   dir.shadow.mapSize.set(2048, 2048);
-  dir.shadow.camera.near = 5; dir.shadow.camera.far = 150;
-  dir.shadow.camera.left = -30; dir.shadow.camera.right = 30;
-  dir.shadow.camera.top = 30; dir.shadow.camera.bottom = -30;
+  dir.shadow.camera.near = 5; dir.shadow.camera.far = 200;
+  dir.shadow.camera.left = -40; dir.shadow.camera.right = 40;
+  dir.shadow.camera.top = 40; dir.shadow.camera.bottom = -40;
   scene.add(dir);
-  const fill = new THREE.DirectionalLight(0x4a6fa5, 0.35);
-  fill.position.set(40, 20, -20);
+  const fill = new THREE.DirectionalLight(0x5a7aa0, 0.4);
+  fill.position.set(50, 25, -25);
   scene.add(fill);
-  const hemi = new THREE.HemisphereLight(0x1a2a4a, 0x0a0a0a, 0.5);
+  const hemi = new THREE.HemisphereLight(0x1a2a4a, 0x0a0a0a, 0.6);
   scene.add(hemi);
 
-  // ---------- world & interior ----------
+  // ---------- world ----------
   const world = buildWorld();
-  const { group: worldGroup, cars, signals, stops } = world;
+  const { group: worldGroup, cars, signals, stops, streetLights } = world;
   scene.add(worldGroup);
 
-  // road texture from the provided asset pack (realistic, not blocks)
+  setLoad(25, 'loading assets…');
+
+  // road texture from asset pack
   new THREE.TextureLoader().load('assets/textures/gltf_embedded_5.png', (tex) => {
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(1, 200);
+    tex.repeat.set(1, 400);
     tex.encoding = THREE.SRGBColorSpace;
     tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
     world.road.material.map = tex;
     world.road.material.needsUpdate = true;
   });
 
+  // ---------- interior ----------
   const { group: interior, refs } = buildInterior();
   scene.add(interior);
 
-  // optional: realistic exterior GLB for third-person view
+  // ---------- exterior (third person) ----------
   let exterior = null;
   try {
-    setLoad(30, 'loading exterior…');
+    setLoad(50, 'loading exterior…');
     const gltf = await new Promise((res, rej) => {
       const loader = new GLTFLoader();
       loader.load('assets/source/tesla_white_car_.glb', res, undefined, rej);
     });
     exterior = gltf.scene;
-    exterior.scale.set(0.95, 0.95, 0.95);
+    exterior.scale.set(0.9, 0.9, 0.9);
     exterior.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     exterior.position.set(0, 0.6, 0);
     exterior.visible = false;
     scene.add(exterior);
-    setLoad(60, 'exterior ready');
+    setLoad(65, 'exterior ready');
   } catch (e) {
-    console.warn('GLB exterior load failed, using smooth proxy:', e);
-    setLoad(60, 'using smooth exterior');
+    console.warn('GLB load failed, using smooth proxy:', e);
+    setLoad(65, 'using smooth exterior');
   }
 
-  // smooth proxy exterior fallback (rounded, not blocks)
   const proxy = new THREE.Group();
   const body = new THREE.Mesh(
-    new THREE.CapsuleGeometry(0.9, 0.6, 8, 20),
-    new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35, metalness: 0.25, flatShading: false })
+    new THREE.CapsuleGeometry(0.9, 0.55, 10, 24),
+    new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.38, metalness: 0.3, flatShading: false })
   );
-  body.rotation.z = Math.PI / 2;
-  body.position.y = 0.05;
-  body.castShadow = true; body.receiveShadow = true;
-  proxy.add(body);
+  body.rotation.z = Math.PI / 2; body.position.y = 0.05;
+  body.castShadow = true; body.receiveShadow = true; proxy.add(body);
   const roof = new THREE.Mesh(
-    new THREE.CapsuleGeometry(0.68, 0.42, 8, 20),
-    new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8, metalness: 0.1, flatShading: false })
+    new THREE.CapsuleGeometry(0.68, 0.4, 10, 24),
+    new THREE.MeshStandardMaterial({ color: 0x0f0f10, roughness: 0.85, metalness: 0.1, flatShading: false })
   );
-  roof.rotation.z = Math.PI / 2;
-  roof.position.set(0, 0.52, 0.02);
-  roof.scale.set(1, 0.6, 1);
-  roof.castShadow = true;
-  proxy.add(roof);
+  roof.rotation.z = Math.PI / 2; roof.position.set(0, 0.5, 0.02); roof.scale.set(1, 0.62, 1);
+  roof.castShadow = true; proxy.add(roof);
   proxy.visible = false;
   scene.add(proxy);
 
@@ -117,27 +141,34 @@ async function main() {
   const camFP = new THREE.PerspectiveCamera(fov, window.innerWidth / window.innerHeight, 0.1, 1000);
   const camTP = new THREE.PerspectiveCamera(fov, window.innerWidth / window.innerHeight, 0.1, 1000);
   let camera = camFP;
-  let cameraMode = 'first'; // 'first' | 'third'
+  let cameraMode = 'first';
+
+  // ---------- post-processing ----------
+  const composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.7, 0.4, 0.85);
+  composer.addPass(bloom);
+  const vignette = new ShaderPass(VignetteShader);
+  composer.addPass(vignette);
 
   // ---------- player state ----------
   const state = {
     x: 0, z: 0, lane: 0,
-    speedKph: 0, targetSpeed: 0,
-    gear: 'P', // P R N D
+    speedKph: 0,
+    gear: 'P',
     steer: 0, throttle: 0, brake: 0,
-    autopilotOn: false
+    blinker: 'off'
   };
 
   const autopilot = new Autopilot();
   const ui = new TeslaUI();
-  window.UI = ui;
-
-  // expose for ui.js toggles
   window.GAME = {
     setDriveMode(m) { autopilot.setMode(m); state.autopilotOn = autopilot.isOn(); },
     notify(msg) { showNote(msg); },
-    autopilot
+    autopilot,
+    ui
   };
+  window.UI = ui;
 
   // ---------- input ----------
   const keys = {};
@@ -152,42 +183,39 @@ async function main() {
     if (c === 'Digit1') { e.preventDefault(); autopilot.setMode(DriveMode.MANUAL); state.autopilotOn = false; }
     if (c === 'Digit2') { e.preventDefault(); autopilot.setMode(DriveMode.AUTO_STEER); state.autopilotOn = true; }
     if (c === 'Digit3') { e.preventDefault(); autopilot.setMode(DriveMode.FSD); state.autopilotOn = true; }
-    // gear stalk: R / D / N / P
     if (c === 'KeyR') { e.preventDefault(); shiftGear('R'); }
     if (c === 'KeyD') { e.preventDefault(); shiftGear('D'); }
     if (c === 'KeyN') { e.preventDefault(); shiftGear('N'); }
     if (c === 'KeyP') {
       e.preventDefault();
-      if (state.gear === 'P') autopilot.toggleAutopark();         // already parked -> Autopark
-      else if (Math.abs(state.speedKph) < 1.5) shiftGear('P');    // stopped -> Park
+      if (state.gear === 'P') autopilot.toggleAutopark();
+      else if (Math.abs(state.speedKph) < 1.5) shiftGear('P');
       else showNote('Stop to shift to Park');
     }
+    if (c === 'KeyL') { e.preventDefault(); state.blinker = state.blinker === 'off' ? 'left' : 'off'; Audio.playClick(); }
+    if (c === 'KeyRight') { e.preventDefault(); state.blinker = state.blinker === 'off' ? 'right' : 'off'; Audio.playClick(); }
   }
+
   function shiftGear(g) {
     if (g === state.gear) return;
     if (Math.abs(state.speedKph) > 2 && g !== 'N') { showNote('Stop to shift'); return; }
     state.gear = g;
-    refs.knob && updateInterior(refs, state);
     showNote('Gear ' + g);
     Audio.playChime();
   }
+
   function toggleCamera() {
     cameraMode = cameraMode === 'first' ? 'third' : 'first';
     camera = cameraMode === 'first' ? camFP : camTP;
     if (cameraMode === 'first') {
-      camFP.add(interior);          // cockpit rides with the driver
-      interior.visible = true;
-      exterior && (exterior.visible = false);
-      proxy.visible = false;
+      camFP.add(interior); interior.visible = true;
+      exterior && (exterior.visible = false); proxy.visible = false;
     } else {
-      scene.add(interior);          // hide cockpit in third person
-      interior.visible = false;
-      exterior && (exterior.visible = true);
-      proxy.visible = !exterior;
+      scene.add(interior); interior.visible = false;
+      exterior && (exterior.visible = true); proxy.visible = !exterior;
     }
     showNote(cameraMode === 'first' ? 'First Person' : 'Third Person');
   }
-  // start in first person
   toggleCamera();
 
   // ---------- HUD ----------
@@ -197,15 +225,11 @@ async function main() {
   const elApStatus = document.getElementById('apStatus');
   const elNote = document.getElementById('hudNote');
   function showNote(msg, ms = 2200) {
-    elNote.textContent = msg;
-    elNote.style.display = 'block';
+    if (!elNote) return;
+    elNote.textContent = msg; elNote.style.display = 'block';
     clearTimeout(window._noteT);
     window._noteT = setTimeout(() => elNote.style.display = 'none', ms);
   }
-
-  // ---------- audio ----------
-  let lastMotor = 0;
-  const engineOn = () => state.gear !== 'P';
 
   // ---------- loop ----------
   const clock = new THREE.Clock();
@@ -214,8 +238,8 @@ async function main() {
   function loop() {
     requestAnimationFrame(loop);
     const dt = Math.min(clock.getDelta(), 0.1);
+    const time = performance.now();
 
-    // input -> driver controls
     const accel = keys['KeyW'] || keys['ArrowUp'];
     const brakeKey = keys['KeyS'] || keys['ArrowDown'];
     const left = keys['KeyA'] || keys['ArrowLeft'];
@@ -227,8 +251,8 @@ async function main() {
       const ap = autopilot.update(dt, state, { cars, signals, stops, nearestAhead, signalAhead });
       throttle = ap.throttle; brake = ap.brake; steer = ap.steer;
       state.gear = 'D';
+      state.blinker = autopilot.getBlinker();
     } else {
-      // manual throttle/brake
       if (state.gear === 'D') { throttle = accel ? 1 : 0; brake = brakeKey ? 0.8 : 0; }
       if (state.gear === 'R') { throttle = accel ? 0.6 : 0; brake = brakeKey ? 0.8 : 0; }
       if (state.gear === 'N') { throttle = 0; brake = brakeKey ? 0.5 : 0; }
@@ -239,34 +263,33 @@ async function main() {
       if (right) targetSteer = 1;
       steer = THREE.MathUtils.lerp(state.steer, targetSteer, 0.15);
       state.steer = steer;
+      state.blinker = (Math.abs(steer) > 0.35) ? (steer > 0 ? 'right' : 'left') : 'off';
     }
 
-    // speed physics
     const sign = state.gear === 'R' ? -1 : 1;
-    const acc = throttle * 28 - brake * 40;
+    const acc = throttle * 30 - brake * 42;
     state.speedKph += acc * dt * sign;
-    state.speedKph = THREE.MathUtils.clamp(state.speedKph, -25, 110);
-    if (Math.abs(throttle) < 0.05 && brake < 0.05) state.speedKph *= (1 - dt * 1.2); // drag
+    state.speedKph = THREE.MathUtils.clamp(state.speedKph, -25, 115);
+    if (Math.abs(throttle) < 0.05 && brake < 0.05) state.speedKph *= (1 - dt * 1.1);
     if (Math.abs(state.speedKph) < 0.3) state.speedKph = 0;
 
-    // position + lane
     state.z += (state.speedKph / 3.6) * dt * sign;
-    const laneTarget = state.steer * 2.6;
-    state.lane = THREE.MathUtils.lerp(state.lane, laneTarget, dt * 2.2);
+    const laneTarget = state.steer * 2.8;
+    state.lane = THREE.MathUtils.lerp(state.lane, laneTarget, dt * 2.0);
     state.x = state.lane;
 
     // collision / FSD reaction
-    const lead = nearestAhead(world, state.z, state.lane, 40);
+    const lead = nearestAhead(world, state.z, state.lane, 42);
     if (lead && lead.dz < 5) {
       state.speedKph = Math.min(state.speedKph, lead.dz * 12);
-      brake = Math.max(brake, 0.6);
+      brake = Math.max(brake, 0.7);
     }
 
-    // update audio
-    if (engineOn()) Audio.setMotor(throttle, Math.abs(state.speedKph));
+    // audio
+    if (state.gear !== 'P') Audio.setMotor(throttle, Math.abs(state.speedKph));
     else Audio.stopMotor();
 
-    // update HUD
+    // HUD
     elSpeed.textContent = Math.abs(Math.round(state.speedKph));
     elGear.textContent = state.gear;
     elGear.style.color = state.gear === 'D' ? '#4ade80' : state.gear === 'R' ? '#fbbf24' : '#fff';
@@ -276,52 +299,41 @@ async function main() {
 
     // cameras
     if (cameraMode === 'first') {
-      // driver eye, inside cockpit (interior rides with camera at +Z)
       camFP.position.set(state.x, 0.62, state.z);
-      camFP.lookAt(state.x + steer * 1.4, 0.66, state.z + 22);
-      // slight pitch on accel/brake
+      camFP.lookAt(state.x + steer * 1.5, 0.66, state.z + 24);
       camFP.rotation.x = THREE.MathUtils.lerp(camFP.rotation.x, brake * 0.03 - throttle * 0.015, 0.1);
     } else {
-      const dist = 7;
-      const height = 3.4;
-      const behindZ = state.z - dist;
-      camTP.position.set(state.x * 0.5, height, behindZ);
-      camTP.lookAt(state.x, 0.8, state.z + 12);
+      const dist = 7.5, height = 3.6;
+      camTP.position.set(state.x * 0.5, height, state.z - dist);
+      camTP.lookAt(state.x, 0.9, state.z + 14);
     }
 
-    // interior animations
-    updateInterior(refs, {
-      steer, throttle, brake,
-      gear: state.gear
-    });
+    updateInterior(refs, { steer, throttle, brake, gear: state.gear, blinker: state.blinker });
 
-    // move world reference for traffic culling (world uses egoZ)
-    updateWorld({ cars, signals, stops }, { egoZ: state.z, egoSpeed: Math.abs(state.speedKph), egoLane: state.lane, dt });
+    updateWorld(world, { egoZ: state.z, egoSpeed: Math.abs(state.speedKph), egoLane: state.lane, dt, time });
 
-    // exterior/proxy follows ego in third person
     if (exterior) { exterior.position.set(state.x, 0.6, state.z); exterior.rotation.y = steer * 0.5; }
     proxy.position.set(state.x, 0.6, state.z); proxy.rotation.y = steer * 0.5;
 
-    renderer.render(scene, camera);
+    composer.render();
   }
 
   setLoad(100, 'ready');
-  setTimeout(() => { document.getElementById('loading').style.display = 'none'; }, 400);
+  setTimeout(() => { const el = document.getElementById('loading'); if (el) el.style.display = 'none'; }, 400);
 
-  // resize
   window.addEventListener('resize', () => {
     const w = window.innerWidth, h = window.innerHeight;
     camFP.aspect = camTP.aspect = w / h;
     camFP.updateProjectionMatrix(); camTP.updateProjectionMatrix();
     renderer.setSize(w, h);
+    composer.setSize(w, h);
   });
 
-  // click to start audio context (gesture)
   canvas.addEventListener('click', () => { Audio.start(); canvas.focus(); });
   canvas.focus();
 
   loop();
-  showNote('FSD-Sim ready. W/S drive · A/D steer · C camera · 1/2/3 Autopilot · P Autopark · T/Tesla UI');
+  showNote('FSD-Sim ready. W/S drive · A/D steer · C camera · 1/2/3 Autopilot · P Autopark · T Tesla UI · L blinker');
 }
 
-main().catch(err => { console.error(err); loadText.textContent = 'Error: ' + err.message; });
+main().catch(err => { console.error(err); if (loadText) loadText.textContent = 'Error: ' + err.message; });
