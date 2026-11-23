@@ -69,6 +69,11 @@ export function buildWorld() {
     e.rotation.x = -Math.PI / 2; e.position.set(x, 0.008, 0); e.receiveShadow = true; group.add(e);
   });
 
+  // glass material for car windows
+  const matGlass = new THREE.MeshStandardMaterial({
+    color: 0xffffff, roughness: 0.0, metalness: 0.95, transparent: true, opacity: 0.55, flatShading: false
+  });
+
   // ---------- traffic cars (smooth, not blocks) ----------
   const cars = [];
   const carColors = [0xffffff, 0x111111, 0x2a3a5a, 0x5a2a2a, 0x2a5a3a, 0xaa8a2a, 0x5a3a5a, 0x3a3a3a];
