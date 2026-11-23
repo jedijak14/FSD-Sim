@@ -2,11 +2,5 @@
   "name": "fsd-sim",
   "version": "1.0.0",
   "private": true,
-  "description": "FSD-Sim — Tesla Interior Simulator",
-  "scripts": {
-    "build": "next build"
-  },
-  "dependencies": {
-    "next": "15.0.0"
-  }
+  "description": "FSD-Sim — Tesla Interior Simulator"
 }
