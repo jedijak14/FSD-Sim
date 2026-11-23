@@ -138,7 +138,11 @@ export function buildWorld() {
     const lane = (i % 2 === 0 ? -1 : 1) * (LANE_W - 1.0);
     const z = (i + 1) * 34 + Math.random() * 24 - 40;
     c.position.set(lane, 0.55, z);
-    c.userData = { lane, speed: 24 + Math.random() * 14, z, targetZ: z };
+    // Preserve headL/headR/tailL/tailR from makeCar; add sim state
+    c.userData.lane = lane;
+    c.userData.speed = 24 + Math.random() * 14;
+    c.userData.z = z;
+    c.userData.targetZ = z;
     group.add(c);
     cars.push(c);
   }

@@ -77,9 +77,9 @@ export class Autopilot {
     let throttle = 0, brake = 0, steer = 0;
 
     // ---------- signals ----------
-    const atRedLight = this.signal.light && this.signal.light.tl.userData.state === 'red' && this.signal.dz < 30;
-    const atYellowLight = this.signal.light && this.signal.light.tl.userData.state === 'yellow' && this.signal.dz < 22;
-    const atStopSign = this.signal.stop && this.signal.dz < 16;
+    const atRedLight = this.signal.light && this.signal.light.tl.userData.state === 'red' && this.signal.light.dz < 30;
+    const atYellowLight = this.signal.light && this.signal.light.tl.userData.state === 'yellow' && this.signal.light.dz < 22;
+    const atStopSign = this.signal.stop && this.signal.stop.dz < 16;
     const hardStop = atRedLight || atStopSign || (this.leadCar && this.leadCar.dz < this.minFollowDist);
     const slowDown = atYellowLight || (this.leadCar && this.leadCar.dz < this.followDist);
 
