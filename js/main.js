@@ -41,7 +41,26 @@ const VignetteShader = {
 
 const loadFill = document.getElementById('loadFill');
 const loadText = document.getElementById('loadText');
-function setLoad(p, t) { if (loadFill) loadFill.style.width = p + '%'; if (t && loadText) loadText.textContent = t; }
+const loadPct = document.getElementById('loadPct');
+let loadTarget = 0;
+let loadCurrent = 0;
+
+function setLoad(p, t) {
+  loadTarget = Math.min(100, Math.max(0, p));
+  if (t && loadText) loadText.textContent = t;
+  if (loadPct) loadPct.textContent = Math.round(loadTarget) + '%';
+}
+
+// Smoothly animate the loading bar toward target
+function tickLoad() {
+  loadCurrent += (loadTarget - loadCurrent) * 0.10;
+  if (loadFill) loadFill.style.width = Math.round(loadCurrent) + '%';
+  if (Math.abs(loadTarget - loadCurrent) < 0.5) {
+    loadCurrent = loadTarget;
+    if (loadFill) loadFill.style.width = loadCurrent + '%';
+  }
+  return loadCurrent < 100 || Math.abs(loadTarget - loadCurrent) > 0.5;
+}
 
 window.GAME = null;
 
@@ -84,41 +103,69 @@ async function main() {
   const { group: worldGroup, cars, signals, stops, streetLights } = world;
   scene.add(worldGroup);
 
-  setLoad(25, 'loading assets…');
+// ---------- preload all assets with real progress ----------
+  const loaderMgr = new THREE.LoadingManager();
+  let assetsLoaded = 0;
+  const assetsTotal = 2; // GLB + road texture
+  loaderMgr.onProgress = (url, loaded, total) => {
+    const pct = Math.round((loaded / total) * 60); // 0-60% for asset loading
+    setLoad(pct, 'loading assets…');
+  };
+  loaderMgr.onLoad = () => {
+    assetsLoaded = assetsTotal;
+    setLoad(60, 'assets ready');
+  };
 
-  // road texture from asset pack
-  new THREE.TextureLoader().load('assets/textures/gltf_embedded_5.png', (tex) => {
+  // preload road texture + GLB exterior through the manager
+  const texLoader = new THREE.TextureLoader(loaderMgr);
+  const gltfLoader = new GLTFLoader(loaderMgr);
+
+  let roadTex = null;
+  texLoader.load('assets/textures/gltf_embedded_5.png', (tex) => {
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
     tex.repeat.set(1, 400);
     tex.encoding = THREE.SRGBColorSpace;
     tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
-    world.road.material.map = tex;
-    world.road.material.needsUpdate = true;
+    roadTex = tex;
   });
 
-  // ---------- interior ----------
-  const { group: interior, refs } = buildInterior();
-  scene.add(interior);
-
-  // ---------- exterior (third person) ----------
   let exterior = null;
+  let gltfResult = null;
   try {
-    setLoad(50, 'loading exterior…');
-    const gltf = await new Promise((res, rej) => {
-      const loader = new GLTFLoader();
-      loader.load('assets/source/tesla_white_car_.glb', res, undefined, rej);
+    setLoad(10, 'loading exterior model…');
+    gltfResult = await new Promise((res, rej) => {
+      gltfLoader.load('assets/source/tesla_white_car_.glb', res, undefined, rej);
     });
-    exterior = gltf.scene;
+    exterior = gltfResult.scene;
     exterior.scale.set(0.9, 0.9, 0.9);
     exterior.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     exterior.position.set(0, 0.6, 0);
     exterior.visible = false;
     scene.add(exterior);
-    setLoad(65, 'exterior ready');
   } catch (e) {
     console.warn('GLB load failed, using smooth proxy:', e);
-    setLoad(65, 'using smooth exterior');
   }
+
+  // wait for all preloads to finish
+  await new Promise(resolve => {
+    const check = () => {
+      if (assetsLoaded >= assetsTotal || loadCurrent >= 60) resolve();
+      else requestAnimationFrame(check);
+    };
+    check();
+  });
+
+  // apply road texture once loaded
+  if (roadTex) {
+    world.road.material.map = roadTex;
+    world.road.material.needsUpdate = true;
+  }
+
+  // ---------- interior ----------
+  const { group: interior, refs } = buildInterior();
+  scene.add(interior);
+
+  setLoad(70, 'building world…');
 
   const proxy = new THREE.Group();
   const body = new THREE.Mesh(
@@ -233,10 +280,12 @@ async function main() {
 
   // ---------- loop ----------
   const clock = new THREE.Clock();
+
   setLoad(90, 'starting…');
 
   function loop() {
     requestAnimationFrame(loop);
+    tickLoad();
     const dt = Math.min(clock.getDelta(), 0.1);
     const time = performance.now();
 
@@ -319,7 +368,29 @@ async function main() {
   }
 
   setLoad(100, 'ready');
-  setTimeout(() => { const el = document.getElementById('loading'); if (el) el.style.display = 'none'; }, 400);
+
+  // animate loading bar to 100, wait minimum time, then fade out
+  await new Promise(resolve => {
+    const finish = () => {
+      tickLoad();
+      if (loadCurrent < 100 || Math.abs(loadTarget - loadCurrent) > 0.5) {
+        requestAnimationFrame(finish);
+      } else {
+        resolve();
+      }
+    };
+    finish();
+  });
+
+  // minimum loading screen display time for polish
+  await new Promise(resolve => setTimeout(resolve, 800));
+
+  const loadingEl = document.getElementById('loading');
+  if (loadingEl) {
+    loadingEl.style.transition = 'opacity 0.5s ease';
+    loadingEl.style.opacity = '0';
+    setTimeout(() => { loadingEl.style.display = 'none'; }, 500);
+  }
 
   window.addEventListener('resize', () => {
     const w = window.innerWidth, h = window.innerHeight;
