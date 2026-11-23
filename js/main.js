@@ -211,7 +211,6 @@ async function main() {
     }
     showNote(cameraMode === 'first' ? 'First Person' : 'Third Person');
   }
-  toggleCamera();
 
   // ---------- HUD ----------
   const elSpeed = document.getElementById('speedVal');
@@ -225,6 +224,8 @@ async function main() {
     clearTimeout(window._noteT);
     window._noteT = setTimeout(() => elNote.style.display = 'none', ms);
   }
+
+  toggleCamera();
 
   // ---------- loop ----------
   const clock = new THREE.Clock();
