@@ -41,6 +41,15 @@ export class TeslaUI {
   }
   toggle() { this.open ? this.closeUI() : this.openUI(); }
 
+  _bindApps() {
+    // App-level bindings for Tesla UI tiles and mini-player.
+    // Individual app actions are wired via inline onclick in _renderPages();
+    // this method exists to keep the constructor contract and can be extended
+    // for programmatic bindings (e.g. media service deep-links, theater DRM).
+    document.getElementById('miniPlay').onclick = () => this.toggleMedia();
+    document.getElementById('uiMediaMini').onclick = () => this.showPage('media');
+  }
+
   _bindShell() {
     document.getElementById('btnCloseUI').onclick = () => this.closeUI();
     const apps = { nav:'btnNav', media:'btnMedia', phone:'btnPhone', theater:'btnTheater', browser:'btnBrowser', climate:'btnClimate', controls:'btnControls', settings:'btnSettings' };
