@@ -1,0 +1,9 @@
+{
+  "name": "fsd-sim",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FSD-Sim — Tesla Interior Simulator",
+  "devDependencies": {
+    "next": "15.0.0"
+  }
+}
