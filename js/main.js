@@ -53,16 +53,16 @@ async function main() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.2;
+  renderer.toneMappingExposure = 1.6;
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x080a0f);
-  scene.fog = new THREE.FogExp2(0x080a0f, 0.0015);
+  scene.background = new THREE.Color(0x12161e);
+  scene.fog = new THREE.FogExp2(0x12161e, 0.0008);
 
   // ---------- lights ----------
-  const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+  const ambient = new THREE.AmbientLight(0xffffff, 0.9);
   scene.add(ambient);
-  const dir = new THREE.DirectionalLight(0xffffff, 1.3);
+  const dir = new THREE.DirectionalLight(0xffffff, 1.8);
   dir.position.set(-50, 70, 30);
   dir.castShadow = true;
   dir.shadow.mapSize.set(2048, 2048);
@@ -70,11 +70,21 @@ async function main() {
   dir.shadow.camera.left = -40; dir.shadow.camera.right = 40;
   dir.shadow.camera.top = 40; dir.shadow.camera.bottom = -40;
   scene.add(dir);
-  const fill = new THREE.DirectionalLight(0x5a7aa0, 0.4);
+  const fill = new THREE.DirectionalLight(0x7aa0ff, 0.7);
   fill.position.set(50, 25, -25);
   scene.add(fill);
-  const hemi = new THREE.HemisphereLight(0x1a2a4a, 0x0a0a0a, 0.6);
+  const hemi = new THREE.HemisphereLight(0x4a6a9a, 0x1a1a1a, 0.9);
   scene.add(hemi);
+
+  // ---------- cabin/interior light (so driver can see dash, yoke, pedals) ----------
+  const cabinLight = new THREE.PointLight(0xffffff, 2.5, 12);
+  cabinLight.position.set(0, 0.5, 0.4);
+  cabinLight.castShadow = false;
+  scene.add(cabinLight);
+
+  const dashLight = new THREE.PointLight(0xffeedd, 1.5, 6);
+  dashLight.position.set(0, 0.25, 0.55);
+  scene.add(dashLight);
 
   // ---------- world ----------
   const world = buildWorld();

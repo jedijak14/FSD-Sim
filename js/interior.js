@@ -10,12 +10,12 @@ export function buildInterior() {
   group.name = 'interior';
 
   // ---------- materials ----------
-  const matDash   = new THREE.MeshStandardMaterial({ color: 0x141416, roughness: 0.65, metalness: 0.10, flatShading: false });
-  const matDashTop= new THREE.MeshStandardMaterial({ color: 0x0b0b0c, roughness: 0.85, metalness: 0.05, flatShading: false });
-  const matGloss  = new THREE.MeshStandardMaterial({ color: 0x121214, roughness: 0.22, metalness: 0.55, flatShading: false });
-  const matMetal  = new THREE.MeshStandardMaterial({ color: 0x959aa0, roughness: 0.28, metalness: 0.90, flatShading: false });
-  const matScreen = new THREE.MeshStandardMaterial({ color: 0x020202, roughness: 0.15, metalness: 0.70, flatShading: false });
-  const matLeather= new THREE.MeshStandardMaterial({ color: 0x0f0f13, roughness: 0.72, metalness: 0.06, flatShading: false });
+  const matDash   = new THREE.MeshStandardMaterial({ color: 0x2a2a2e, roughness: 0.65, metalness: 0.10, flatShading: false });
+  const matDashTop= new THREE.MeshStandardMaterial({ color: 0x1a1a1e, roughness: 0.85, metalness: 0.05, flatShading: false });
+  const matGloss  = new THREE.MeshStandardMaterial({ color: 0x222226, roughness: 0.22, metalness: 0.55, flatShading: false });
+  const matMetal  = new THREE.MeshStandardMaterial({ color: 0xa5aaaf, roughness: 0.28, metalness: 0.90, flatShading: false });
+  const matScreen = new THREE.MeshStandardMaterial({ color: 0x080808, roughness: 0.15, metalness: 0.70, flatShading: false });
+  const matLeather= new THREE.MeshStandardMaterial({ color: 0x1e1e24, roughness: 0.72, metalness: 0.06, flatShading: false });
   const matGlass  = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.0, metalness: 0.95, transparent: true, opacity: 0.55, flatShading: false });
   const matRed    = new THREE.MeshStandardMaterial({ color: 0x2a0808, roughness: 0.4, metalness: 0.1, flatShading: false });
 
@@ -123,7 +123,7 @@ export function buildInterior() {
 
   // ---------- pedals ----------
   const pedalGroup = new THREE.Group();
-  const pedalMat = new THREE.MeshStandardMaterial({ color: 0x161616, roughness: 0.40, metalness: 0.55, flatShading: false });
+  const pedalMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2e, roughness: 0.40, metalness: 0.55, flatShading: false });
   const makePedal = (x, z, rotX) => {
     const p = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.022, 0.18), pedalMat);
     p.position.set(x, -0.022, z);
@@ -140,7 +140,7 @@ export function buildInterior() {
   group.add(pedalGroup);
 
   // ---------- seats ----------
-  const seatMat = new THREE.MeshStandardMaterial({ color: 0x0c0c0e, roughness: 0.75, metalness: 0.04, flatShading: false });
+  const seatMat = new THREE.MeshStandardMaterial({ color: 0x1e1e24, roughness: 0.75, metalness: 0.04, flatShading: false });
   const makeSeat = (x) => {
     const s = new THREE.Group();
     const base = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.16, 0.62), seatMat);
