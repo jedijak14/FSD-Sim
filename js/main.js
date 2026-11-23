@@ -239,6 +239,9 @@ async function main() {
     const right = keys['KeyD'] || keys['ArrowRight'];
 
     let throttle = 0, brake = 0, steer = 0;
+    let acc = 0;
+    const accelInput = accel ? 1 : 0;
+    const brakeInput = brakeKey ? 1 : 0;
 
     if (autopilot.isOn()) {
       const ap = autopilot.update(dt, state, { cars, signals, stops, nearestAhead, signalAhead });
@@ -246,11 +249,6 @@ async function main() {
       state.gear = 'D';
       state.blinker = autopilot.getBlinker();
     } else {
-      // Smooth throttle / brake input (0 to 1)
-      const accelInput = accel ? 1 : 0;
-      const brakeInput = brakeKey ? 1 : 0;
-
-      let acc = 0;
       if (state.gear === 'D' || state.gear === 'R') {
         acc = accelInput * 28 - brakeInput * 38;
       } else if (state.gear === 'N') {
