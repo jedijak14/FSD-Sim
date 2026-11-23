@@ -387,9 +387,8 @@ async function main() {
 
   const loadingEl = document.getElementById('loading');
   if (loadingEl) {
-    loadingEl.style.transition = 'opacity 0.5s ease';
-    loadingEl.style.opacity = '0';
-    setTimeout(() => { loadingEl.style.display = 'none'; }, 500);
+    loadingEl.classList.add('hidden');
+    setTimeout(() => { loadingEl.style.display = 'none'; }, 600);
   }
 
   window.addEventListener('resize', () => {

@@ -1,6 +1,6 @@
 /* ============================================================
-   FSD-Sim — Tesla UI (center screen + apps)
-   Authentic Tesla-style center display. All apps functional.
+   FSD-Sim — Tesla UI (premium)
+   Authentic Tesla center display. All apps functional.
    ============================================================ */
 export class TeslaUI {
   constructor() {
@@ -15,11 +15,13 @@ export class TeslaUI {
       track: 'Tesla Radio',
       artist: 'Streaming',
       service: 'spotify',
-      progress: 0
+      progress: 0,
+      art: '🎵'
     };
     this.climate = { driver: 72, passenger: 72, ac: false, seatHeatD: 0, seatHeatP: 0, defrost: false };
     this.settings = { autopilot: false, fsd: false, speedAssist: true, units: 'mph', stopping: 'Hold', steering: 'Comfort' };
     this.version = '2024.38.12';
+    this.navDestination = null;
     this._bindShell();
     this._renderPages();
     this._bindApps();
@@ -64,7 +66,7 @@ export class TeslaUI {
   closeModal() { this.modal.classList.remove('open'); this.modalBox.innerHTML = ''; }
 
   alert(title, html) {
-    this.modalBox.innerHTML = `<h3>${title}</h3>${html}`;
+    this.modalBox.innerHTML = `<div style="text-align:center"><h3 style="margin:0 0 14px;font-size:1.4rem;color:#fff">${title}</h3><div style="font-size:0.98rem;color:#c7c7c7;line-height:1.6">${html}</div></div>`;
     this.modal.classList.add('open');
   }
 
@@ -78,8 +80,8 @@ export class TeslaUI {
   }
 
   toggleMedia() { this.media.playing = !this.media.playing; this._refreshMini(); }
-  setMedia(service, track, artist) {
-    this.media.service = service; this.media.track = track; this.media.artist = artist; this.media.playing = true;
+  setMedia(service, track, artist, art) {
+    this.media.service = service; this.media.track = track; this.media.artist = artist; this.media.art = art || '🎵'; this.media.playing = true;
     this._refreshMini();
     if (this.open) this.showPage('media');
   }
@@ -92,12 +94,16 @@ export class TeslaUI {
     if (elPlay) elPlay.textContent = this.media.playing ? '⏸' : '▶';
     const elTitle = document.getElementById('mediaTitle');
     const elSub = document.getElementById('mediaSub');
+    const elArt = document.getElementById('mediaArt');
     if (elTitle) elTitle.textContent = this.media.track;
     if (elSub) elSub.textContent = this.media.artist;
+    if (elArt) elArt.textContent = this.media.art;
+    const elFill = document.getElementById('mediaProgFill');
+    if (elFill) elFill.style.width = this.media.progress + '%';
   }
   _mediaLoop() {
     if (this.media.playing) {
-      this.media.progress += 0.35;
+      this.media.progress += 0.25;
       if (this.media.progress > 100) this.media.progress = 0;
       const el = document.getElementById('mediaProgFill');
       if (el) el.style.width = this.media.progress + '%';
@@ -115,33 +121,33 @@ export class TeslaUI {
         <div class="tile" onclick="UI.setRoute('Supercharger')"><div class="t-icon">⚡</div><div class="t-label">Supercharger</div></div>
         <div class="tile" onclick="UI.setRoute('Search…')"><div class="t-icon">🔍</div><div class="t-label">Search</div></div>
       </div>
-      <div style="margin-top:14px;border-top:1px solid rgba(255,255,255,.06);padding-top:10px;">
-        <div style="font-size:.85rem;color:var(--tesla-text-dim)">Route guidance</div>
-        <div id="navRoute" style="font-size:1.1rem;color:#fff;margin-top:4px">No destination set</div>
+      <div style="margin-top:20px;border-top:1px solid rgba(255,255,255,0.06);padding-top:14px;">
+        <div style="font-size:0.85rem;color:var(--tesla-text-dim)">Route guidance</div>
+        <div id="navRoute" style="font-size:1.2rem;color:#fff;margin-top:6px">${this.navDestination ? 'Navigating to ' + this.navDestination : 'No destination set'}</div>
       </div>
     </div>
 
     <div class="app-page" id="page-media">
       <div class="page-title">Media</div>
       <div class="media-player">
-        <div class="media-art" id="mediaArt">🎵</div>
+        <div class="media-art" id="mediaArt">${this.media.art}</div>
         <div class="media-info">
           <div class="media-title" id="mediaTitle">${this.media.track}</div>
           <div class="media-sub" id="mediaSub">${this.media.artist}</div>
+          <div class="media-prog"><div class="media-prog-fill" id="mediaProgFill"></div></div>
         </div>
-        <div class="media-prog"><div class="media-prog-fill" id="mediaProgFill"></div></div>
         <div class="media-controls">
           <div class="media-btn" onclick="UI.prevTrack()">⏮</div>
-          <div class="media-btn primary" onclick="UI.toggleMedia()" id="mediaPlayBtn">▶</div>
+          <div class="media-btn primary" onclick="UI.toggleMedia()" id="mediaPlayBtn">${this.media.playing ? '⏸' : '▶'}</div>
           <div class="media-btn" onclick="UI.nextTrack()">⏭</div>
-          <div style="color:#666;font-size:.8rem">Shuffle · Repeat</div>
+          <div style="color:#666;font-size:0.8rem">Shuffle · Repeat</div>
         </div>
       </div>
-      <div class="tile-grid" style="margin-top:14px;">
-        <div class="tile spotify" onclick="UI.openService('spotify','Spotify','Today\'s Top Hits')"><div class="t-icon">🟢</div><div class="t-label">Spotify</div></div>
-        <div class="tile apple" onclick="UI.openService('apple','Apple Music','Apple Music 1')"><div class="t-icon">🍎</div><div class="t-label">Apple Music</div></div>
-        <div class="tile audible" onclick="UI.openService('audible','Audible','Audiobooks')"><div class="t-icon">🎧</div><div class="t-label">Audible</div></div>
-        <div class="tile youtube" onclick="UI.openService('youtube','YouTube Music','YouTube')"><div class="t-icon">▶</div><div class="t-label">YouTube Music</div></div>
+      <div class="tile-grid" style="margin-top:16px;">
+        <div class="tile spotify" onclick="UI.openService('spotify','Spotify','Today\'s Top Hits','🟢')"><div class="t-icon">🟢</div><div class="t-label">Spotify</div></div>
+        <div class="tile apple" onclick="UI.openService('apple','Apple Music','Apple Music 1','🍎')"><div class="t-icon">🍎</div><div class="t-label">Apple Music</div></div>
+        <div class="tile audible" onclick="UI.openService('audible','Audible','Audiobooks','🎧')"><div class="t-icon">🎧</div><div class="t-label">Audible</div></div>
+        <div class="tile youtube" onclick="UI.openService('youtube','YouTube Music','YouTube','▶')"><div class="t-icon">▶</div><div class="t-label">YouTube Music</div></div>
       </div>
     </div>
 
@@ -158,14 +164,14 @@ export class TeslaUI {
     <div class="app-page" id="page-theater">
       <div class="page-title">Theater (Parked)</div>
       <div class="theater-grid">
-        <div class="theater-tile netflix" onclick="UI.launchTheater('Netflix','https://www.netflix.com')">Netflix</div>
-        <div class="theater-tile disney" onclick="UI.launchTheater('Disney+','https://www.disneyplus.com')">Disney+</div>
-        <div class="theater-tile hulu" onclick="UI.launchTheater('Hulu','https://www.hulu.com')">Hulu</div>
-        <div class="theater-tile hbo" onclick="UI.launchTheater('HBO Max','https://www.hbomax.com')">HBO Max</div>
-        <div class="theater-tile youtube" onclick="UI.launchTheater('YouTube','https://www.youtube.com')">YouTube</div>
-        <div class="theater-tile" onclick="UI.launchTheater('Twitch','https://www.twitch.tv')">Twitch</div>
+        <div class="theater-tile netflix" onclick="UI.launchTheater('Netflix','https://www.netflix.com')"><div class="t-icon">N</div><div class="t-label">Netflix</div></div>
+        <div class="theater-tile disney" onclick="UI.launchTheater('Disney+','https://www.disneyplus.com')"><div class="t-icon">D</div><div class="t-label">Disney+</div></div>
+        <div class="theater-tile hulu" onclick="UI.launchTheater('Hulu','https://www.hulu.com')"><div class="t-icon">H</div><div class="t-label">Hulu</div></div>
+        <div class="theater-tile hbo" onclick="UI.launchTheater('HBO Max','https://www.hbomax.com')"><div class="t-icon">H</div><div class="t-label">HBO Max</div></div>
+        <div class="theater-tile youtube" onclick="UI.launchTheater('YouTube','https://www.youtube.com')"><div class="t-icon">Y</div><div class="t-label">YouTube</div></div>
+        <div class="theater-tile" onclick="UI.launchTheater('Twitch','https://www.twitch.tv')"><div class="t-icon">T</div><div class="t-label">Twitch</div></div>
       </div>
-      <div style="font-size:.8rem;color:var(--tesla-text-dim);margin-top:10px">Theater requires Park. Streaming services may block in-car embedding.</div>
+      <div style="font-size:0.8rem;color:var(--tesla-text-dim);margin-top:12px">Theater requires Park. Streaming services may block in-car embedding.</div>
     </div>
 
     <div class="app-page" id="page-browser">
@@ -183,25 +189,25 @@ export class TeslaUI {
 
     <div class="app-page" id="page-climate">
       <div class="page-title">Climate</div>
-      <div style="display:flex;gap:18px;">
+      <div style="display:flex;gap:24px;">
         <div style="flex:1;display:flex;flex-direction:column;align-items:center;">
-          <div style="font-size:2.6rem;font-weight:700;color:#fff" id="climateTemp">72°</div>
-          <div style="font-size:.9rem;color:var(--tesla-text-dim);margin-top:6px">Driver</div>
-          <div style="margin-top:14px;display:flex;gap:8px;">
-            <button class="ui-btn" style="height:40px;font-size:1rem" onclick="UI.adjustTemp(-1)">−</button>
-            <button class="ui-btn" style="height:40px;font-size:1rem" onclick="UI.adjustTemp(1)">+</button>
+          <div style="font-size:3.2rem;font-weight:700;color:#fff" id="climateTemp">72°</div>
+          <div style="font-size:0.95rem;color:var(--tesla-text-dim);margin-top:8px">Driver</div>
+          <div style="margin-top:16px;display:flex;gap:10px;">
+            <button class="ui-btn" style="height:44px;font-size:1.1rem" onclick="UI.adjustTemp(-1)">−</button>
+            <button class="ui-btn" style="height:44px;font-size:1.1rem" onclick="UI.adjustTemp(1)">+</button>
           </div>
         </div>
         <div style="flex:1;display:flex;flex-direction:column;align-items:center;">
-          <div style="font-size:2.6rem;font-weight:700;color:#fff" id="climateTemp2">72°</div>
-          <div style="font-size:.9rem;color:var(--tesla-text-dim);margin-top:6px">Passenger</div>
-          <div style="margin-top:14px;display:flex;gap:8px;">
-            <button class="ui-btn" style="height:40px;font-size:1rem" onclick="UI.adjustTemp2(-1)">−</button>
-            <button class="ui-btn" style="height:40px;font-size:1rem" onclick="UI.adjustTemp2(1)">+</button>
+          <div style="font-size:3.2rem;font-weight:700;color:#fff" id="climateTemp2">72°</div>
+          <div style="font-size:0.95rem;color:var(--tesla-text-dim);margin-top:8px">Passenger</div>
+          <div style="margin-top:16px;display:flex;gap:10px;">
+            <button class="ui-btn" style="height:44px;font-size:1.1rem" onclick="UI.adjustTemp2(-1)">−</button>
+            <button class="ui-btn" style="height:44px;font-size:1.1rem" onclick="UI.adjustTemp2(1)">+</button>
           </div>
         </div>
       </div>
-      <div class="tile-grid" style="margin-top:18px;">
+      <div class="tile-grid" style="margin-top:20px;">
         <div class="tile" onclick="UI.toggleAC()"><div class="t-icon">❄️</div><div class="t-label">A/C</div></div>
         <div class="tile" onclick="UI.toggleSeatHeat('driver')"><div class="t-icon">🪑</div><div class="t-label">Seat Heat D</div></div>
         <div class="tile" onclick="UI.toggleSeatHeat('pass')"><div class="t-icon">🪑</div><div class="t-label">Seat Heat P</div></div>
@@ -237,22 +243,23 @@ export class TeslaUI {
   }
 
   setRoute(dest) {
+    this.navDestination = dest;
     document.getElementById('navRoute').textContent = `Navigating to ${dest}…`;
     this.alert('Navigation', `Setting route to <b>${dest}</b>. Estimated arrival in <b>12 min</b>.<br>FSD will follow the route, stop at signals and yield to traffic.`);
   }
 
-  openService(service, name, station) {
-    this.setMedia(service, station, name);
+  openService(service, name, station, art) {
+    this.setMedia(service, station, name, art);
     this.alert(name, `Now playing <b>${station}</b> on <b>${name}</b>. Use the Media player controls or the mini-player at the bottom of the screen.`);
   }
 
-  prevTrack() { this.setMedia(this.media.service, 'Previous Track', this.media.artist); }
-  nextTrack() { this.setMedia(this.media.service, 'Next Track', this.media.artist); }
+  prevTrack() { this.setMedia(this.media.service, 'Previous Track', this.media.artist, this.media.art); }
+  nextTrack() { this.setMedia(this.media.service, 'Next Track', this.media.artist, this.media.art); }
 
   dial(tab) { this.alert('Phone', `Opened <b>${tab}</b>. Contacts sync with your paired phone. Tap a number to call via the car speaker.`); }
 
   launchTheater(name, url) {
-    this.alert(`${name} Theater`, `<b>${name}</b> would open full-screen here.<br><br>Note: most streaming services block embedding in third-party iframes for DRM/rights reasons, so in a real car they run in Tesla's own Chromium-based Theater app. In this sim, open the site in the Web Browser app instead.`);
+    this.alert(`${name} Theater`, `<b>${name}</b> would open full-screen here.<br><br>Most streaming services block embedding in third-party iframes for DRM/rights reasons. In a real Tesla they run in Tesla's own Chromium-based Theater app. Use the Web Browser app instead.`);
   }
 
   goBrowser() {
@@ -267,7 +274,7 @@ export class TeslaUI {
   adjustTemp(d) { const el = document.getElementById('climateTemp'); const v = Math.round(parseInt(el.textContent) + d); el.textContent = v + '°'; this.climate.driver = v; }
   adjustTemp2(d) { const el = document.getElementById('climateTemp2'); const v = Math.round(parseInt(el.textContent) + d); el.textContent = v + '°'; this.climate.passenger = v; }
   toggleAC() { this.climate.ac = !this.climate.ac; this._toast(`A/C ${this.climate.ac ? 'on' : 'off'}`); }
-  toggleSeatHeat(s) { this.climate[s === 'driver' ? 'seatHeatD' : 'seatHeatP'] = (this.climate[s === 'driver' ? 'seatHeatD' : 'seatHeatP'] + 1) % 3; this._toast(`Seat heat ${s === 'driver' ? 'driver' : 'passenger'} level ${this.climate[s === 'driver' ? 'seatHeatD' : 'seatHeatP']}`); }
+  toggleSeatHeat(s) { const key = s === 'driver' ? 'seatHeatD' : 'seatHeatP'; this.climate[key] = (this.climate[key] + 1) % 3; this._toast(`Seat heat ${s === 'driver' ? 'driver' : 'passenger'} level ${this.climate[key]}`); }
   toggleDefrost() { this.climate.defrost = !this.climate.defrost; this._toast('Defrost ' + (this.climate.defrost ? 'on' : 'off')); }
   toggleLock() { this._toast('Doors locked'); }
   toggleFrunk() { this._toast('Frunk opened'); }
@@ -279,13 +286,13 @@ export class TeslaUI {
     const el = document.getElementById(els[key]);
     const on = el.classList.toggle('on');
     this.settings[key] = on;
-    this._toast(`${key} ${on ? 'on' : 'off'}`);
+    this._toast(`${key.charAt(0).toUpperCase() + key.slice(1)} ${on ? 'on' : 'off'}`);
     if (window.GAME) {
       if (key === 'autopilot') window.GAME.setDriveMode(on ? 1 : 0);
       if (key === 'fsd') window.GAME.setDriveMode(on ? 2 : (window.GAME.autopilot.mode === 2 ? 0 : window.GAME.autopilot.mode));
     }
   }
-  cycleStopping() { const m = ['Hold','Roll','Creep']; const i = m.indexOf(this.settings.stopping); this.settings.stopping = m[(i+1)%m.length]; document.getElementById('page-settings') && this._renderPages(); this._toast(`Stopping Mode: ${this.settings.stopping}`); }
+  cycleStopping() { const m = ['Hold','Roll','Creep']; const i = m.indexOf(this.settings.stopping); this.settings.stopping = m[(i+1)%m.length]; this._toast(`Stopping Mode: ${this.settings.stopping}`); }
   cycleSteering() { const m = ['Comfort','Standard','Sport']; const i = m.indexOf(this.settings.steering); this.settings.steering = m[(i+1)%m.length]; this._toast(`Steering Mode: ${this.settings.steering}`); }
   toggleUnits() { this.settings.units = this.settings.units === 'mph' ? 'km/h' : 'mph'; this._toast(`Units: ${this.settings.units}`); }
   checkUpdate() { this.alert('Software', 'Your software is up to date. Version ' + this.version); }

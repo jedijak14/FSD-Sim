@@ -1,27 +1,32 @@
 /* ============================================================
-   FSD-Sim — Tesla UI Styles
+   FSD-Sim — Tesla UI (premium redesign)
+   Glassmorphism, Tesla design language, smooth animations
    ============================================================ */
 :root{
   --tesla-black:#000000;
-  --tesla-dark:#111111;
-  --tesla-gray:#2a2a2a;
+  --tesla-dark:#0a0a0a;
+  --tesla-gray:#1a1a1a;
   --tesla-red:#e50914;
-  --tesla-red-dim:#3a0a0c;
+  --tesla-red-glow:rgba(229,9,20,0.35);
   --tesla-white:#ffffff;
   --tesla-text:#e8e8e8;
-  --tesla-text-dim:#999999;
+  --tesla-text-dim:#8a8a8a;
   --tesla-blue:#2a8cff;
   --tesla-green:#4ade80;
   --tesla-amber:#fbbf24;
-  --radius: 20px;
-  --radius-sm: 10px;
+  --radius: 24px;
+  --radius-sm: 12px;
+  --glass: rgba(255,255,255,0.04);
+  --glass-border: rgba(255,255,255,0.08);
+  --shadow: 0 20px 60px rgba(0,0,0,0.8);
+  --transition: 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 html,body{ margin:0; height:100%; overflow: hidden; background: #000;
   font-family: 'SF Pro Display','SF Pro Text', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  color: var(--tesla-text); }
+  color: var(--tesla-text); -webkit-font-smoothing: antialiased; }
 
 #glcanvas{ position: fixed; inset: 0; z-index: 0; display: block; }
 
@@ -31,209 +36,217 @@ html,body{ margin:0; height:100%; overflow: hidden; background: #000;
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 32px; z-index: 50; pointer-events: none;
   font-family: 'SF Pro Display', sans-serif;
-  background: linear-gradient(180deg, rgba(0,0,0,.75), transparent);
+  background: linear-gradient(180deg, rgba(0,0,0,0.85), transparent);
+  backdrop-filter: blur(20px);
 }
-.hud-speed{ font-size: 2.5rem; font-weight: 700; letter-spacing: -0.04em; pointer-events: auto; }
-.hud-speed #speedUnit{ font-size: 1rem; font-weight: 500; opacity: .7; margin-left: 6px; }
-.hud-gear{ font-size: 2rem; font-weight: 700; color: var(--tesla-green); }
-.hud-ap{ display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
-#apMode{ font-size: .95rem; font-weight: 500; color: var(--tesla-text-dim); letter-spacing: .05em; text-transform: uppercase; }
-#apStatus{ font-size: 1.1rem; font-weight: 700; }
+.hud-speed{ font-size: 2.6rem; font-weight: 700; letter-spacing: -0.04em; pointer-events: auto; color:#fff; }
+.hud-speed #speedUnit{ font-size: 1rem; font-weight: 500; opacity: .7; margin-left: 6px; color: var(--tesla-text-dim); }
+.hud-gear{ font-size: 2.1rem; font-weight: 700; color: var(--tesla-green); letter-spacing: -0.02em; }
+.hud-ap{ display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+#apMode{ font-size: 1rem; font-weight: 500; color: var(--tesla-text-dim); letter-spacing: 0.08em; text-transform: uppercase; }
+#apStatus{ font-size: 1.3rem; font-weight: 700; letter-spacing: -0.02em; }
 #apStatus.ap-off{ color: var(--tesla-text-dim); }
-#apStatus.ap-on{ color: var(--tesla-green); text-shadow: 0 0 14px rgba(74,222,128,.45); }
+#apStatus.ap-on{ color: var(--tesla-green); text-shadow: 0 0 20px var(--tesla-red-glow); }
+
 .hud-notification{
-  position: fixed; top: 90px; left: 50%; transform: translateX(-50%);
-  padding: 10px 20px; border-radius: 12px; background: rgba(0,0,0,.85);
-  border: 1px solid rgba(255,255,255,.12); color: #fff; font-size: .95rem;
-  z-index: 60; pointer-events: auto; box-shadow: 0 10px 40px rgba(0,0,0,.6);
+  position: fixed; top: 96px; left: 50%; transform: translateX(-50%);
+  padding: 12px 24px; border-radius: 16px; background: rgba(0,0,0,0.85);
+  border: 1px solid var(--glass-border); color: #fff; font-size: 0.95rem;
+  z-index: 60; pointer-events: auto; box-shadow: var(--shadow);
+  backdrop-filter: blur(20px); opacity: 0; transform: translate(-50%, -10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
+.hud-notification.show{ opacity: 1; transform: translate(-50%, 0); }
 
 /* ===== TESLA UI OVERLAY ===== */
 .tesla-ui{
   position: fixed; inset: 0; z-index: 100; background: var(--tesla-black);
-  display: flex; flex-direction: column; color: var(--tesla-text); visibility: hidden;
-  opacity: 0; transition: opacity .28s ease, visibility .28s ease;
+  display: flex; flex-direction: column; color: var(--tesla-text);
+  visibility: hidden; opacity: 0; transition: opacity 0.35s ease, visibility 0.35s ease;
+  backdrop-filter: blur(10px);
 }
 .tesla-ui.open{ visibility: visible; opacity: 1; }
 .tesla-ui.closing{ visibility: hidden; opacity: 0; }
 
+/* Status bar - Tesla style */
 .ui-statusbar{
-  height: 46px; display: flex; align-items: center; justify-content: space-between;
-  padding: 0 30px; background: var(--tesla-black); border-bottom: 1px solid rgba(255,255,255,.06);
+  height: 52px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 34px; background: rgba(0,0,0,0.6); border-bottom: 1px solid var(--glass-border);
+  backdrop-filter: blur(24px);
 }
-.ui-time{ font-variant-numeric: tabular-nums; font-size: 1.15rem; font-weight: 500; letter-spacing: -.02em; }
-.ui-car{ display: flex; align-items: center; gap: 6px; }
+.ui-time{ font-variant-numeric: tabular-nums; font-size: 1.25rem; font-weight: 500; letter-spacing: -0.01em; }
+.ui-car{ display: flex; align-items: center; gap: 8px; }
 .ui-car-body{
-  width: 150px; height: 42px; border-radius: 22px / 20px; background: #1a1a1a;
-  border: 1px solid rgba(255,255,255,.10); position: relative; overflow: hidden;
+  width: 156px; height: 40px; border-radius: 22px / 20px; background: rgba(255,255,255,0.06);
+  border: 1px solid var(--glass-border); position: relative; overflow: hidden;
 }
 .ui-car-body::after{
   content:''; position: absolute; inset: 0; border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255,255,255,.06), transparent 60%);
+  background: linear-gradient(180deg, rgba(255,255,255,0.08), transparent 70%);
 }
 .ui-car-door{
-  width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255,255,255,.16);
+  width: 13px; height: 13px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.14);
   background: #0a0a0a; }
-.ui-car-door.fl{ margin-right:-10px; }
-.ui-car-door.fr{ margin-left:-10px; }
-.ui-car-door.rl{ margin-right:-10px; opacity:.55; }
-.ui-car-door.rr{ margin-left:-10px; opacity:.55; }
-.ui-temp{ width: 34px; text-align: right; font-size: 1rem; font-weight: 500; }
-.ui-battery{ display: flex; align-items: center; gap: 8px; font-size: .9rem; font-weight: 500; }
-.ui-bat-fill{ width: 26px; height: 14px; border-radius: 7px; background: linear-gradient(90deg, var(--tesla-green), #22c55e); }
-.ui-signal{ width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.25); border-radius: 50%; opacity: .6; }
+.ui-car-door.fl{ margin-right:-11px; }
+.ui-car-door.fr{ margin-left:-11px; }
+.ui-car-door.rl{ margin-right:-11px; opacity:.5; }
+.ui-car-door.rr{ margin-left:-11px; opacity:.5; }
+.ui-temp{ width: 32px; text-align: right; font-size: 1rem; font-weight: 500; color:#fff; }
+.ui-battery{ display: flex; align-items: center; gap: 8px; font-size: 0.9rem; font-weight: 500; color:#fff; }
+.ui-bat-fill{ width: 24px; height: 13px; border-radius: 6.5px; background: linear-gradient(90deg, var(--tesla-green), #22c55e); box-shadow: 0 0 14px var(--tesla-green); }
+.ui-signal{ width: 17px; height: 17px; border: 2px solid rgba(255,255,255,0.2); border-radius: 50%; opacity: 0.6; }
 
+/* App bar */
 .ui-appbar{
-  display: flex; gap: 4px; padding: 22px 30px 10px;
-  background: radial-gradient(600px 400px at 50% -10%, rgba(255,255,255,.04), transparent);
+  display: flex; gap: 5px; padding: 24px 34px 12px;
+  background: radial-gradient(800px 500px at 50% -10%, rgba(255,255,255,0.03), transparent);
 }
 .ui-btn{
-  flex: 1; height: 64px; border: none; border-radius: var(--radius-sm);
-  background: rgba(255,255,255,.04); color: #c7c7c7; font-size: 1.5rem;
-  cursor: pointer; transition: background .15s, color .15s, transform .05s;
-  border: 1px solid rgba(255,255,255,.06); display: flex; align-items: center; justify-content: center;
+  flex: 1; height: 60px; border: none; border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.03); color: #b0b0b0; font-size: 1.4rem;
+  cursor: pointer; transition: all 0.18s ease;
+  border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center;
   font-family: inherit; }
-.ui-btn:active{ transform: scale(.96); }
-.ui-btn.active{ background: rgba(255,255,255,.10); color: #fff; border-color: rgba(255,255,255,.18); }
-.ui-btn.close{ width: 64px; color: var(--tesla-text-dim); font-size: 1.35rem; }
+.ui-btn:active{ transform: scale(0.95); background: rgba(255,255,255,0.06); }
+.ui-btn.active{ background: rgba(229,9,20,0.12); color: #fff; border-color: rgba(229,9,20,0.25); box-shadow: 0 0 20px var(--tesla-red-glow); }
+.ui-btn.close{ width: 60px; color: var(--tesla-text-dim); font-size: 1.35rem; }
 
+/* Content area */
 .ui-content{
   flex: 1; overflow: hidden; position: relative; background: var(--tesla-black);
-  padding: 6px 30px 24px; display: flex; flex-direction: column; gap: 14px;
+  padding: 8px 34px 28px; display: flex; flex-direction: column; gap: 16px;
 }
 
-.ui-bottom{
-  height: 60px; display: flex; align-items: center; justify-content: space-between;
-  padding: 0 30px; border-top: 1px solid rgba(255,255,255,.06); background: var(--tesla-black);
-}
-.ui-media-mini{ display: flex; align-items: center; gap: 10px; }
-#miniTrack{ font-weight: 600; font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
-#miniArtist{ font-size: .8rem; color: var(--tesla-text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
-.ui-mini-play{ width: 30px; height: 30px; border-radius: 50%; background: #fff; color: #000; border: none;
-  font-size: .75rem; font-weight: 700; cursor: pointer; display: grid; place-items: center; }
-.ui-homelink{ font-size: .85rem; color: var(--tesla-text-dim); }
-#hlState{ color: var(--tesla-text); }
-
-/* ===== APP PAGES ===== */
+/* App pages */
 .app-page{ display: none; width: 100%; height: 100%; }
-.app-page.active{ display: block; }
-.app-page .page-title{ font-size: 1.3rem; font-weight: 700; letter-spacing: .02em; margin-bottom: 14px; color: #fff; }
+.app-page.active{ display: block; animation: pageFade 0.35s ease both; }
+@keyframes pageFade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.app-page .page-title{ font-size: 1.4rem; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 18px; color: #fff; }
 
-/* tiles grid */
-.tile-grid{ display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+/* Tiles grid */
+.tile-grid{ display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
 .tile{
-  border-radius: var(--radius-sm); height: 150px; border: 1px solid rgba(255,255,255,.08);
-  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+  border-radius: var(--radius-sm); height: 148px; border: 1px solid var(--glass-border);
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
   cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 8px; transition: transform .1s, border-color .15s, background .15s;
-  position: relative; overflow: hidden; }
-.tile:active{ transform: scale(.95); }
-.tile:hover{ border-color: rgba(255,255,255,.25); background: rgba(255,255,255,.08); }
-.tile .t-icon{ font-size: 2.2rem; filter: drop-shadow(0 0 8px rgba(0,0,0,.6)); }
-.tile .t-label{ font-size: .92rem; font-weight: 500; color: #e2e2e2; }
+  gap: 10px; transition: all 0.2s ease; position: relative; overflow: hidden; }
+.tile::before{
+  content:''; position: absolute; inset: 0; border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255,255,255,0.05), transparent 60%); opacity: 0; transition: opacity 0.2s ease;
+}
+.tile:active{ transform: scale(0.96); }
+.tile:hover{
+  border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.07);
+  transform: translateY(-2px);
+}
+.tile:hover::before{ opacity: 1; }
+.tile .t-icon{ font-size: 2.4rem; filter: drop-shadow(0 0 12px rgba(0,0,0,0.6)); }
+.tile .t-label{ font-size: 0.95rem; font-weight: 500; color: #d4d4d4; }
 
-.tile.spotify .t-icon{ color: #1ed760; text-shadow: 0 0 20px rgba(30,215,96,.45); }
-.tile.apple .t-icon{ color: #f54544; text-shadow: 0 0 20px rgba(245,69,68,.45); }
-.tile.audible .t-icon{ color: #ff3f6c; text-shadow: 0 0 20px rgba(255,63,108,.45); }
-.tile.youtube .t-icon{ color: #ff0000; text-shadow: 0 0 20px rgba(255,0,0,.45); }
-.tile.netflix .t-icon{ color: #e50914; text-shadow: 0 0 20px rgba(229,9,20,.45); }
-.tile.disney .t-icon{ color: #113ccf; text-shadow: 0 0 20px rgba(17,60,207,.45); }
-.tile.hulu .t-icon{ color: #1e22e1; text-shadow: 0 0 20px rgba(30,34,225,.45); }
-.tile.hbo .t-icon{ color: #5808d5; text-shadow: 0 0 20px rgba(88,8,213,.45); }
+/* Colored tiles */
+.tile.spotify .t-icon{ color: #1ed760; text-shadow: 0 0 24px rgba(30,215,96,0.4); }
+.tile.apple .t-icon{ color: #f54544; text-shadow: 0 0 24px rgba(245,69,68,0.4); }
+.tile.audible .t-icon{ color: #ff3f6c; text-shadow: 0 0 24px rgba(255,63,108,0.4); }
+.tile.youtube .t-icon{ color: #ff0000; text-shadow: 0 0 24px rgba(255,0,0,0.4); }
+.tile.netflix .t-icon{ color: #e50914; text-shadow: 0 0 24px rgba(229,9,20,0.4); }
+.tile.disney .t-icon{ color: #113ccf; text-shadow: 0 0 24px rgba(17,60,207,0.4); }
+.tile.hulu .t-icon{ color: #1e22e1; text-shadow: 0 0 24px rgba(30,34,225,0.4); }
+.tile.hbo .t-icon{ color: #5808d5; text-shadow: 0 0 24px rgba(88,8,213,0.4); }
 
-/* media player */
+/* Media player */
 .media-player{
-  height: 420px; border-radius: var(--radius); background: #0a0a0a;
-  border: 1px solid rgba(255,255,255,.08); display: flex; flex-direction: column; overflow: hidden;
-}
+  height: 400px; border-radius: var(--radius); background: linear-gradient(180deg, #0f0f0f 0%, #000 100%);
+  border: 1px solid var(--glass-border); display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: var(--shadow); position: relative; }
 .media-art{ flex:1; background: linear-gradient(135deg, #1a1a1a 0%, #000 100%);
-  display: flex; align-items: center; justify-content: center; font-size: 5rem; color: #222; border-bottom: 1px solid rgba(255,255,255,.06);}
-.media-info{ padding: 20px; }
-.media-title{ font-size: 1.5rem; font-weight: 700; color: #fff; }
-.media-sub{ font-size: 1rem; color: var(--tesla-text-dim); margin-top: 4px; }
-.media-controls{ display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-top: 1px solid rgba(255,255,255,.06); }
-.media-btn{ width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.06);
-  color: #fff; font-size: 1.1rem; cursor: pointer; display: grid; place-items: center; }
-.media-btn.primary{ width: 60px; height: 60px; font-size: 1.5rem; background: #fff; color: #000; }
-.media-prog{ height: 4px; background: rgba(255,255,255,.10); border-radius: 2px; overflow: hidden; cursor: pointer; }
-.media-prog-fill{ height: 100%; width: 34%; background: #fff; }
+  display: flex; align-items: center; justify-content: center; font-size: 6rem; color: #222; border-bottom: 1px solid var(--glass-border); }
+.media-info{ padding: 24px; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.media-title{ font-size: 1.9rem; font-weight: 700; color: #fff; letter-spacing: -0.01em; }
+.media-sub{ font-size: 1.1rem; color: var(--tesla-text-dim); margin-top: 6px; }
+.media-controls{ display: flex; align-items: center; justify-content: space-between; padding: 20px 28px; border-top: 1px solid var(--glass-border); }
+.media-btn{ width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.04);
+  color: #fff; font-size: 1.1rem; cursor: pointer; display: grid; place-items: center; transition: all 0.15s ease; }
+.media-btn:active{ transform: scale(0.9); }
+.media-btn.primary{ width: 64px; height: 64px; font-size: 1.6rem; background: #fff; color: #000; box-shadow: 0 0 30px rgba(255,255,255,0.4); }
+.media-btn.primary:active{ transform: scale(0.93); }
+.media-prog{ height: 5px; background: rgba(255,255,255,0.08); border-radius: 2.5px; overflow: hidden; cursor: pointer; margin-top: 12px; }
+.media-prog-fill{ height: 100%; width: 0%; background: #fff; border-radius: 2.5px; transition: width 0.3s ease; }
 
-/* theater / browser */
-.theater-grid{ display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; }
+/* Theater / Browser */
+.theater-grid{ display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 16px; }
 .theater-tile{
-  height: 110px; border-radius: 14px; border: 1px solid rgba(255,255,255,.08);
+  height: 110px; border-radius: 16px; border: 1px solid var(--glass-border);
   background: #0a0a0a; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  color: #aaa; font-size: .85rem; transition: transform .1s, border-color .15s;
-}
-.theater-tile:active{ transform: scale(.95); }
-.theater-tile:hover{ border-color: var(--tesla-red); color: #fff; }
+  color: #999; font-size: 0.9rem; transition: all 0.2s ease; }
+.theater-tile:active{ transform: scale(0.96); }
+.theater-tile:hover{ border-color: var(--tesla-red); color: #fff; background: rgba(229,9,20,0.06); }
 
 .browser-wrap{
-  height: 600px; border-radius: var(--radius); background: #000; border: 1px solid rgba(255,255,255,.08);
-  overflow: hidden; display: flex; flex-direction: column; position: relative;
+  height: 560px; border-radius: var(--radius); background: #000; border: 1px solid var(--glass-border);
+  overflow: hidden; display: flex; flex-direction: column; position: relative; box-shadow: var(--shadow);
 }
 .browser-bar{
-  height: 40px; background: #1a1a1a; display: flex; align-items: center; padding: 0 14px; gap: 10px; border-bottom: 1px solid rgba(255,255,255,.06);
+  height: 40px; background: #121212; display: flex; align-items: center; padding: 0 14px; gap: 10px; border-bottom: 1px solid var(--glass-border);
 }
-.browser-url{ flex:1; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.10); border-radius: 6px;
-  padding: 0 10px; color: #bbb; font-size: .82rem; font-family: monospace; outline: none; }
+.browser-url{ flex:1; background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); border-radius: 6px;
+  padding: 0 10px; color: #999; font-size: 0.82rem; font-family: monospace; outline: none; }
+.browser-url:focus{ border-color: var(--tesla-blue); color: #fff; }
 .browser-go{ width: 30px; height: 24px; background: var(--tesla-red); border: none; border-radius: 4px; color: #fff;
-  font-size: .75rem; cursor: pointer; }
+  font-size: 0.75rem; cursor: pointer; }
 .browser-view{ flex:1; background: #000; }
 .browser-view iframe{ width: 100%; height: 100%; border: none; display: block; }
 
-/* settings */
-.settings-list{ display: flex; flex-direction: column; gap: 10px; }
+/* Settings */
+.settings-list{ display: flex; flex-direction: column; gap: 12px; }
 .setting-row{
-  display: flex; align-items: center; justify-content: space-between; padding: 12px 4px;
-  border-bottom: 1px solid rgba(255,255,255,.06); font-size: .95rem;
-}
-.setting-row label{ color: #ccc; }
-.setting-row .val{ color: #fff; font-variant-numeric: tabular-nums; }
-.toggle{ position: relative; width: 44px; height: 24px; background: rgba(255,255,255,.12); border-radius: 12px;
-  cursor: pointer; }
-.toggle::after{ content:''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: #fff; border-radius: 50%;
-  transition: transform .2s; }
+  display: flex; align-items: center; justify-content: space-between; padding: 14px 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.98rem; }
+.setting-row:last-child{ border-bottom: none; }
+.setting-row label{ color: #aaa; }
+.setting-row .val{ color: #fff; font-variant-numeric: tabular-nums; cursor: pointer; transition: color 0.2s ease; }
+.setting-row .val:hover{ color: var(--tesla-blue); }
+.toggle{ position: relative; width: 46px; height: 26px; background: rgba(255,255,255,0.1); border-radius: 13px;
+  cursor: pointer; transition: background 0.3s ease; }
+.toggle::after{ content:''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; background: #fff; border-radius: 50%;
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1); }
 .toggle.on{ background: var(--tesla-red); }
 .toggle.on::after{ transform: translateX(20px); }
 
-/* ===== MODAL ===== */
+/* Modal */
 .ui-modal{
-  position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.8);
+  position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.85);
   display: flex; align-items: center; justify-content: center; visibility: hidden; opacity: 0;
-  transition: opacity .2s ease, visibility .2s ease;
+  transition: opacity 0.3s ease, visibility 0.3s ease; backdrop-filter: blur(24px);
 }
 .ui-modal.open{ visibility: visible; opacity: 1; }
 .ui-modal-box{
-  width: min(520px, 92vw); max-height: 85vh; overflow-y: auto; background: #111;
-  border: 1px solid rgba(255,255,255,.10); border-radius: 24px; padding: 28px 32px;
-  color: #e8e8e8; box-shadow: 0 25px 80px rgba(0,0,0,.8);
+  width: min(540px, 94vw); max-height: 88vh; overflow-y: auto; background: #111;
+  border: 1px solid var(--glass-border); border-radius: 28px; padding: 32px 40px;
+  color: #e8e8e8; box-shadow: 0 40px 120px rgba(0,0,0,0.9); animation: modalSlide 0.35s ease both;
 }
-.ui-modal-box h3{ margin: 0 0 12px; font-size: 1.25rem; color: #fff; }
-.ui-modal-box p{ margin: 0 0 14px; font-size: .95rem; color: #c7c7c7; line-height: 1.55; }
+@keyframes modalSlide { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+.ui-modal-box h3{ margin: 0 0 14px; font-size: 1.4rem; color: #fff; }
+.ui-modal-box p{ margin: 0 0 16px; font-size: 0.98rem; color: #c7c7c7; line-height: 1.6; }
 .ui-modal-close{
-  position: absolute; top: 16px; right: 20px; background: none; border: none; color: #888; font-size: 1.5rem; cursor: pointer;
-}
+  position: absolute; top: 18px; right: 24px; background: none; border: none; color: #666; font-size: 1.6rem; cursor: pointer;
+  transition: color 0.2s ease; }
 .ui-modal-close:hover{ color: #fff; }
 
-/* ===== SCREEN MIRROR ===== */
+/* Screen mirror */
 .screen-mirror{
-  position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
-  width: min(92vw, 700px); height: calc(min(92vh, 560px) - 20px);
-  border-radius: 34px; border: 2px solid #111; background: #000; overflow: hidden;
-  z-index: 45; box-shadow: 0 30px 100px rgba(0,0,0,.9);
+  position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
+  width: min(94vw, 760px); height: calc(min(94vh, 600px) - 20px);
+  border-radius: 42px; border: 2px solid #111; background: #000; overflow: hidden;
+  z-index: 45; box-shadow: 0 40px 140px rgba(0,0,0,0.95); pointer-events: auto;
 }
 
-/* ===== CENTERSCREEN 3D OVERLAY (rendered inside cockpit) ===== */
-#centerScreen{ position: absolute; inset: 0; z-index: 2; pointer-events: none; }
-
-/* ===== UTILS ===== */
+/* Utilities */
 .hidden{ display: none !important; }
-.btn-bar{ position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-  display: flex; gap: 10px; z-index: 55; }
-.hint{ position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
-  color: rgba(255,255,255,.45); font-size: .8rem; letter-spacing: .08em; text-transform: uppercase;
+.btn-bar{ position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 12px; z-index: 55; }
+.hint{ position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+  color: rgba(255,255,255,0.4); font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase;
   z-index: 55; pointer-events: none; }
 
-::-webkit-scrollbar{ width: 6px; }
-::-webkit-scrollbar-thumb{ background: rgba(255,255,255,.15); border-radius: 4px; }
+::-webkit-scrollbar{ width: 5px; }
+::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.1); border-radius: 4px; }
