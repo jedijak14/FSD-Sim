@@ -42,7 +42,8 @@ const VignetteShader = {
 window.GAME = null;
 
 async function main() {
-  await Audio.start();
+  // Audio requires user gesture; start non-blocking, canvas click resumes it
+  Audio.start().catch(() => {});
 
   const canvas = document.getElementById('glcanvas');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
