@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FSD-Sim — Tesla Interior Simulator</title>
+<meta name="description" content="Real-time Tesla Model 3 interior simulator with Autopark, Autosteer, FSD, full Tesla UI and apps.">
+<link rel="preload" as="font" href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;700&family=SF+Pro+Text:wght@400;500&display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  #loading {
+    position: fixed; inset: 0; background: #000; color: #fff; display: grid; place-items: center;
+    z-index: 10000; font-family: 'SF Pro Display', system-ui, -apple-system, sans-serif;
+  }
+  #loading .bar { width: 320px; height: 6px; background: #111; border-radius: 3px; overflow: hidden; margin-top: 18px; }
+  #loading .fill { width: 0%; height: 100%; background: #e50914; transition: width 0.15s; }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div>FSD-SIM<br><span style="font-weight:400;opacity:.75;font-size:1rem;letter-spacing:.2em">TESLA SIMULATOR</span></div>
+  <div class="bar"><div class="fill" id="loadFill"></div></div>
+  <div id="loadText" style="margin-top:12px;font-size:.85rem;letter-spacing:.1em;opacity:.8">loading assets…</div>
+</div>
+
+<!-- ============================================================ -->
+<!-- GAME CANVAS                                                  -->
+<!-- ============================================================ -->
+<canvas id="glcanvas" tabindex="0"></canvas>
+
+<!-- ============================================================ -->
+<!-- HUD OVERLAY (speed, gear, autopilot status)                  -->
+<!-- ============================================================ -->
+<div id="hud" class="hud" aria-hidden="true">
+  <div class="hud-speed"><span id="speedVal">0</span><span id="speedUnit">mph</span></div>
+  <div class="hud-gear" id="gearDisp">P</div>
+  <div class="hud-ap" id="apDisp">
+    <span id="apMode">MANUAL</span>
+    <span id="apStatus" class="ap-off">OFF</span>
+  </div>
+  <div class="hud-notification" id="hudNote" style="display:none"></div>
+</div>
+
+<!-- ============================================================ -->
+<!-- TESLA UI OVERLAY (center screen)                             -->
+<!-- ============================================================ -->
+<div id="teslaUI" class="tesla-ui" aria-hidden="true">
+  <div class="ui-statusbar">
+    <div class="ui-time" id="uiTime">12:00</div>
+    <div class="ui-car">
+      <div class="ui-car-door fl" id="doorFL"></div>
+      <div class="ui-car-door fr" id="doorFR"></div>
+      <div class="ui-car-body"></div>
+      <div class="ui-car-door rl" id="doorRL"></div>
+      <div class="ui-car-door rr" id="doorRR"></div>
+    </div>
+    <div class="ui-temp">72°</div>
+    <div class="ui-battery" id="uiBattery"><div class="ui-bat-fill"></div><span>90%</span></div>
+    <div class="ui-signal"></div>
+  </div>
+
+  <div class="ui-appbar">
+    <button class="ui-btn" id="btnNav" title="Navigation">🗺️</button>
+    <button class="ui-btn active" id="btnMedia" title="Media">🎵</button>
+    <button class="ui-btn" id="btnPhone" title="Phone">📞</button>
+    <button class="ui-btn" id="btnTheater" title="Theater">🎭</button>
+    <button class="ui-btn" id="btnBrowser" title="Web Browser">🌐</button>
+    <button class="ui-btn" id="btnClimate" title="Climate">❄️</button>
+    <button class="ui-btn" id="btnControls" title="Controls">🚗</button>
+    <button class="ui-btn" id="btnSettings" title="Settings">⚙️</button>
+    <button class="ui-btn close" id="btnCloseUI" title="Close">✕</button>
+  </div>
+
+  <div class="ui-content" id="uiContent"></div>
+
+  <div class="ui-bottom">
+    <div class="ui-media-mini" id="uiMediaMini">
+      <span id="miniTrack">Media</span><span id="miniArtist">Tap to open Media</span>
+      <button class="ui-mini-play" id="miniPlay">▶</button>
+    </div>
+    <div class="ui-homelink" id="uiHomeLink">HomeLink: <span id="hlState">Garage Door</span></div>
+  </div>
+</div>
+
+<div id="uiModal" class="ui-modal" style="display:none">
+  <div class="ui-modal-box" id="uiModalBox"></div>
+  <button class="ui-modal-close" id="uiModalClose">✕</button>
+</div>
+
+<!-- ============================================================ -->
+<!-- CENTERSCREEN MIRROR (the big Tesla screen rendered in 3D)    -->
+<!-- ============================================================ -->
+<div id="screenMirror" class="screen-mirror" style="display:none;pointer-events:none"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.166.1/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.166.1/examples/jsm/"
+  }
+}
+</script>
+<script type="module" src="js/main.js"></script>
+
+</body>
+</html>

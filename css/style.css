@@ -1,0 +1,239 @@
+/* ============================================================
+   FSD-Sim — Tesla UI Styles
+   ============================================================ */
+:root{
+  --tesla-black:#000000;
+  --tesla-dark:#111111;
+  --tesla-gray:#2a2a2a;
+  --tesla-red:#e50914;
+  --tesla-red-dim:#3a0a0c;
+  --tesla-white:#ffffff;
+  --tesla-text:#e8e8e8;
+  --tesla-text-dim:#999999;
+  --tesla-blue:#2a8cff;
+  --tesla-green:#4ade80;
+  --tesla-amber:#fbbf24;
+  --radius: 20px;
+  --radius-sm: 10px;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html,body{ margin:0; height:100%; overflow: hidden; background: #000;
+  font-family: 'SF Pro Display','SF Pro Text', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--tesla-text); }
+
+#glcanvas{ position: fixed; inset: 0; z-index: 0; display: block; }
+
+/* ===== HUD ===== */
+.hud{
+  position: fixed; top: 0; left: 0; right: 0; height: 72px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 32px; z-index: 50; pointer-events: none;
+  font-family: 'SF Pro Display', sans-serif;
+  background: linear-gradient(180deg, rgba(0,0,0,.75), transparent);
+}
+.hud-speed{ font-size: 2.5rem; font-weight: 700; letter-spacing: -0.04em; pointer-events: auto; }
+.hud-speed #speedUnit{ font-size: 1rem; font-weight: 500; opacity: .7; margin-left: 6px; }
+.hud-gear{ font-size: 2rem; font-weight: 700; color: var(--tesla-green); }
+.hud-ap{ display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+#apMode{ font-size: .95rem; font-weight: 500; color: var(--tesla-text-dim); letter-spacing: .05em; text-transform: uppercase; }
+#apStatus{ font-size: 1.1rem; font-weight: 700; }
+#apStatus.ap-off{ color: var(--tesla-text-dim); }
+#apStatus.ap-on{ color: var(--tesla-green); text-shadow: 0 0 14px rgba(74,222,128,.45); }
+.hud-notification{
+  position: fixed; top: 90px; left: 50%; transform: translateX(-50%);
+  padding: 10px 20px; border-radius: 12px; background: rgba(0,0,0,.85);
+  border: 1px solid rgba(255,255,255,.12); color: #fff; font-size: .95rem;
+  z-index: 60; pointer-events: auto; box-shadow: 0 10px 40px rgba(0,0,0,.6);
+}
+
+/* ===== TESLA UI OVERLAY ===== */
+.tesla-ui{
+  position: fixed; inset: 0; z-index: 100; background: var(--tesla-black);
+  display: flex; flex-direction: column; color: var(--tesla-text); visibility: hidden;
+  opacity: 0; transition: opacity .28s ease, visibility .28s ease;
+}
+.tesla-ui.open{ visibility: visible; opacity: 1; }
+.tesla-ui.closing{ visibility: hidden; opacity: 0; }
+
+.ui-statusbar{
+  height: 46px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 30px; background: var(--tesla-black); border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.ui-time{ font-variant-numeric: tabular-nums; font-size: 1.15rem; font-weight: 500; letter-spacing: -.02em; }
+.ui-car{ display: flex; align-items: center; gap: 6px; }
+.ui-car-body{
+  width: 150px; height: 42px; border-radius: 22px / 20px; background: #1a1a1a;
+  border: 1px solid rgba(255,255,255,.10); position: relative; overflow: hidden;
+}
+.ui-car-body::after{
+  content:''; position: absolute; inset: 0; border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255,255,255,.06), transparent 60%);
+}
+.ui-car-door{
+  width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255,255,255,.16);
+  background: #0a0a0a; }
+.ui-car-door.fl{ margin-right:-10px; }
+.ui-car-door.fr{ margin-left:-10px; }
+.ui-car-door.rl{ margin-right:-10px; opacity:.55; }
+.ui-car-door.rr{ margin-left:-10px; opacity:.55; }
+.ui-temp{ width: 34px; text-align: right; font-size: 1rem; font-weight: 500; }
+.ui-battery{ display: flex; align-items: center; gap: 8px; font-size: .9rem; font-weight: 500; }
+.ui-bat-fill{ width: 26px; height: 14px; border-radius: 7px; background: linear-gradient(90deg, var(--tesla-green), #22c55e); }
+.ui-signal{ width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.25); border-radius: 50%; opacity: .6; }
+
+.ui-appbar{
+  display: flex; gap: 4px; padding: 22px 30px 10px;
+  background: radial-gradient(600px 400px at 50% -10%, rgba(255,255,255,.04), transparent);
+}
+.ui-btn{
+  flex: 1; height: 64px; border: none; border-radius: var(--radius-sm);
+  background: rgba(255,255,255,.04); color: #c7c7c7; font-size: 1.5rem;
+  cursor: pointer; transition: background .15s, color .15s, transform .05s;
+  border: 1px solid rgba(255,255,255,.06); display: flex; align-items: center; justify-content: center;
+  font-family: inherit; }
+.ui-btn:active{ transform: scale(.96); }
+.ui-btn.active{ background: rgba(255,255,255,.10); color: #fff; border-color: rgba(255,255,255,.18); }
+.ui-btn.close{ width: 64px; color: var(--tesla-text-dim); font-size: 1.35rem; }
+
+.ui-content{
+  flex: 1; overflow: hidden; position: relative; background: var(--tesla-black);
+  padding: 6px 30px 24px; display: flex; flex-direction: column; gap: 14px;
+}
+
+.ui-bottom{
+  height: 60px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 30px; border-top: 1px solid rgba(255,255,255,.06); background: var(--tesla-black);
+}
+.ui-media-mini{ display: flex; align-items: center; gap: 10px; }
+#miniTrack{ font-weight: 600; font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+#miniArtist{ font-size: .8rem; color: var(--tesla-text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+.ui-mini-play{ width: 30px; height: 30px; border-radius: 50%; background: #fff; color: #000; border: none;
+  font-size: .75rem; font-weight: 700; cursor: pointer; display: grid; place-items: center; }
+.ui-homelink{ font-size: .85rem; color: var(--tesla-text-dim); }
+#hlState{ color: var(--tesla-text); }
+
+/* ===== APP PAGES ===== */
+.app-page{ display: none; width: 100%; height: 100%; }
+.app-page.active{ display: block; }
+.app-page .page-title{ font-size: 1.3rem; font-weight: 700; letter-spacing: .02em; margin-bottom: 14px; color: #fff; }
+
+/* tiles grid */
+.tile-grid{ display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+.tile{
+  border-radius: var(--radius-sm); height: 150px; border: 1px solid rgba(255,255,255,.08);
+  background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+  cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; transition: transform .1s, border-color .15s, background .15s;
+  position: relative; overflow: hidden; }
+.tile:active{ transform: scale(.95); }
+.tile:hover{ border-color: rgba(255,255,255,.25); background: rgba(255,255,255,.08); }
+.tile .t-icon{ font-size: 2.2rem; filter: drop-shadow(0 0 8px rgba(0,0,0,.6)); }
+.tile .t-label{ font-size: .92rem; font-weight: 500; color: #e2e2e2; }
+
+.tile.spotify .t-icon{ color: #1ed760; text-shadow: 0 0 20px rgba(30,215,96,.45); }
+.tile.apple .t-icon{ color: #f54544; text-shadow: 0 0 20px rgba(245,69,68,.45); }
+.tile.audible .t-icon{ color: #ff3f6c; text-shadow: 0 0 20px rgba(255,63,108,.45); }
+.tile.youtube .t-icon{ color: #ff0000; text-shadow: 0 0 20px rgba(255,0,0,.45); }
+.tile.netflix .t-icon{ color: #e50914; text-shadow: 0 0 20px rgba(229,9,20,.45); }
+.tile.disney .t-icon{ color: #113ccf; text-shadow: 0 0 20px rgba(17,60,207,.45); }
+.tile.hulu .t-icon{ color: #1e22e1; text-shadow: 0 0 20px rgba(30,34,225,.45); }
+.tile.hbo .t-icon{ color: #5808d5; text-shadow: 0 0 20px rgba(88,8,213,.45); }
+
+/* media player */
+.media-player{
+  height: 420px; border-radius: var(--radius); background: #0a0a0a;
+  border: 1px solid rgba(255,255,255,.08); display: flex; flex-direction: column; overflow: hidden;
+}
+.media-art{ flex:1; background: linear-gradient(135deg, #1a1a1a 0%, #000 100%);
+  display: flex; align-items: center; justify-content: center; font-size: 5rem; color: #222; border-bottom: 1px solid rgba(255,255,255,.06);}
+.media-info{ padding: 20px; }
+.media-title{ font-size: 1.5rem; font-weight: 700; color: #fff; }
+.media-sub{ font-size: 1rem; color: var(--tesla-text-dim); margin-top: 4px; }
+.media-controls{ display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-top: 1px solid rgba(255,255,255,.06); }
+.media-btn{ width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.06);
+  color: #fff; font-size: 1.1rem; cursor: pointer; display: grid; place-items: center; }
+.media-btn.primary{ width: 60px; height: 60px; font-size: 1.5rem; background: #fff; color: #000; }
+.media-prog{ height: 4px; background: rgba(255,255,255,.10); border-radius: 2px; overflow: hidden; cursor: pointer; }
+.media-prog-fill{ height: 100%; width: 34%; background: #fff; }
+
+/* theater / browser */
+.theater-grid{ display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; }
+.theater-tile{
+  height: 110px; border-radius: 14px; border: 1px solid rgba(255,255,255,.08);
+  background: #0a0a0a; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: #aaa; font-size: .85rem; transition: transform .1s, border-color .15s;
+}
+.theater-tile:active{ transform: scale(.95); }
+.theater-tile:hover{ border-color: var(--tesla-red); color: #fff; }
+
+.browser-wrap{
+  height: 600px; border-radius: var(--radius); background: #000; border: 1px solid rgba(255,255,255,.08);
+  overflow: hidden; display: flex; flex-direction: column; position: relative;
+}
+.browser-bar{
+  height: 40px; background: #1a1a1a; display: flex; align-items: center; padding: 0 14px; gap: 10px; border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.browser-url{ flex:1; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.10); border-radius: 6px;
+  padding: 0 10px; color: #bbb; font-size: .82rem; font-family: monospace; outline: none; }
+.browser-go{ width: 30px; height: 24px; background: var(--tesla-red); border: none; border-radius: 4px; color: #fff;
+  font-size: .75rem; cursor: pointer; }
+.browser-view{ flex:1; background: #000; }
+.browser-view iframe{ width: 100%; height: 100%; border: none; display: block; }
+
+/* settings */
+.settings-list{ display: flex; flex-direction: column; gap: 10px; }
+.setting-row{
+  display: flex; align-items: center; justify-content: space-between; padding: 12px 4px;
+  border-bottom: 1px solid rgba(255,255,255,.06); font-size: .95rem;
+}
+.setting-row label{ color: #ccc; }
+.setting-row .val{ color: #fff; font-variant-numeric: tabular-nums; }
+.toggle{ position: relative; width: 44px; height: 24px; background: rgba(255,255,255,.12); border-radius: 12px;
+  cursor: pointer; }
+.toggle::after{ content:''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: #fff; border-radius: 50%;
+  transition: transform .2s; }
+.toggle.on{ background: var(--tesla-red); }
+.toggle.on::after{ transform: translateX(20px); }
+
+/* ===== MODAL ===== */
+.ui-modal{
+  position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.8);
+  display: flex; align-items: center; justify-content: center; visibility: hidden; opacity: 0;
+  transition: opacity .2s ease, visibility .2s ease;
+}
+.ui-modal.open{ visibility: visible; opacity: 1; }
+.ui-modal-box{
+  width: min(520px, 92vw); max-height: 85vh; overflow-y: auto; background: #111;
+  border: 1px solid rgba(255,255,255,.10); border-radius: 24px; padding: 28px 32px;
+  color: #e8e8e8; box-shadow: 0 25px 80px rgba(0,0,0,.8);
+}
+.ui-modal-box h3{ margin: 0 0 12px; font-size: 1.25rem; color: #fff; }
+.ui-modal-box p{ margin: 0 0 14px; font-size: .95rem; color: #c7c7c7; line-height: 1.55; }
+.ui-modal-close{
+  position: absolute; top: 16px; right: 20px; background: none; border: none; color: #888; font-size: 1.5rem; cursor: pointer;
+}
+.ui-modal-close:hover{ color: #fff; }
+
+/* ===== SCREEN MIRROR ===== */
+.screen-mirror{
+  position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+  width: min(92vw, 700px); height: calc(min(92vh, 560px) - 20px);
+  border-radius: 34px; border: 2px solid #111; background: #000; overflow: hidden;
+  z-index: 45; box-shadow: 0 30px 100px rgba(0,0,0,.9);
+}
+
+/* ===== CENTERSCREEN 3D OVERLAY (rendered inside cockpit) ===== */
+#centerScreen{ position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+
+/* ===== UTILS ===== */
+.hidden{ display: none !important; }
+.btn-bar{ position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 10px; z-index: 55; }
+.hint{ position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+  color: rgba(255,255,255,.45); font-size: .8rem; letter-spacing: .08em; text-transform: uppercase;
+  z-index: 55; pointer-events: none; }
+
+::-webkit-scrollbar{ width: 6px; }
+::-webkit-scrollbar-thumb{ background: rgba(255,255,255,.15); border-radius: 4px; }
