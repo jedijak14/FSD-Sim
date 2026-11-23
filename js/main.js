@@ -9,7 +9,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { Audio } from './audio.js';
-import { buildInterior, updateInterior } from './interior.js';
+import { buildInterior, updateInterior, buildDriver } from './interior.js';
 import { buildWorld, updateWorld, nearestAhead, signalAhead } from './world.js';
 import { Autopilot, DriveMode } from './fsd.js';
 import { TeslaUI } from './ui.js';
@@ -114,9 +114,18 @@ async function main() {
     exterior = gltf.scene;
     exterior.scale.set(0.9, 0.9, 0.9);
     exterior.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-    exterior.position.set(0, 0.6, 0);
+    // GLB is authored facing +Y; we drive down +Z, so rotate it onto the road
+    exterior.rotation.x = Math.PI / 2;
+    exterior.position.set(0, 1.0, 0);
     exterior.visible = false;
     scene.add(exterior);
+
+    // driver in the driver's seat (visible through the glass in third person)
+    const driverExt = buildDriver();
+    driverExt.rotation.x = -Math.PI / 2;
+    driverExt.position.set(-0.55, 0.60, 0.15);
+    driverExt.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    exterior.add(driverExt);
   } catch (e) {
     console.warn('GLB load failed/timeout, using smooth proxy:', e);
   }
@@ -215,9 +224,11 @@ async function main() {
     if (cameraMode === 'first') {
       camFP.add(interior); interior.visible = true;
       exterior && (exterior.visible = false); proxy.visible = false;
+      refs.driverHead && (refs.driverHead.visible = false);
     } else {
       scene.add(interior); interior.visible = false;
       exterior && (exterior.visible = true); proxy.visible = !exterior;
+      refs.driverHead && (refs.driverHead.visible = true);
     }
     showNote(cameraMode === 'first' ? 'First Person' : 'Third Person');
   }
@@ -347,8 +358,8 @@ async function main() {
 
     updateWorld(world, { egoZ: state.z, egoSpeed: Math.abs(state.speedKph), egoLane: state.lane, dt, time });
 
-    if (exterior) { exterior.position.set(state.x, 0.6, state.z); exterior.rotation.y = steer * 0.5; }
-    proxy.position.set(state.x, 0.6, state.z); proxy.rotation.y = steer * 0.5;
+    if (exterior) { exterior.position.set(state.x, 1.0, state.z); exterior.rotation.set(Math.PI / 2, steer * 0.5, 0); }
+    proxy.position.set(state.x, 1.0, state.z); proxy.rotation.set(0, steer * 0.5, Math.PI / 2);
 
     composer.render();
   }

@@ -208,18 +208,23 @@ export function buildInterior() {
   foot.name = 'footwellLight';
   group.add(foot);
 
+  // ---------- driver: you, in the driver's seat (smooth shaded, no hands) ----------
+  const driver = buildDriver();
+  group.add(driver);
+
   return { group, refs: {
     wheel: wheelGroup, wheelMesh: rim,
     accel, brake,
     gearStalk, gearKnob: gk,
     turnStalk,
     screen, screenGlow: glow,
-    footwell: foot
+    footwell: foot,
+    driver, driverHead: driver.userData.head
   } };
 }
 
 export function updateInterior(refs, state) {
-  const { wheel, wheelMesh, accel, brake, gearStalk, gearKnob, turnStalk, screen, screenGlow, footwell } = refs;
+  const { wheel, wheelMesh, accel, brake, gearStalk, gearKnob, turnStalk, screen, screenGlow, footwell, driver } = refs;
 
   // steering yoke follows steer input smoothly
   if (wheel && state.steer !== undefined) {
@@ -252,6 +257,12 @@ export function updateInterior(refs, state) {
     turnStalk.rotation.z = THREE.MathUtils.lerp(turnStalk.rotation.z, -0.10, 0.1);
   }
 
+  // driver leans into turns
+  if (driver) {
+    const targetRoll = state.steer * 0.10;
+    driver.rotation.z = THREE.MathUtils.lerp(driver.rotation.z || 0, targetRoll, 0.1);
+  }
+
   // screen glow matches drive mode
   if (screenGlow) {
     let g = 0.02, hex = 0x1a0000;
@@ -266,4 +277,56 @@ export function updateInterior(refs, state) {
     footwell.material.opacity = THREE.MathUtils.lerp(footwell.material.opacity, state.gear !== 'P' ? 0.10 : 0.02, 0.05);
     footwell.material.color.setHex(0x2a0000);
   }
+}
+
+// ---------- driver figure (smooth shaded; body seen in first person,
+// full character visible through the glass in third person) ----------
+function buildDriver() {
+  const driver = new THREE.Group();
+  const matSkin = new THREE.MeshStandardMaterial({ color: 0xe4c9b8, roughness: 0.9, metalness: 0.1, flatShading: false });
+  const matCloth = new THREE.MeshStandardMaterial({ color: 0x16161a, roughness: 0.95, metalness: 0.05, flatShading: false });
+  const matShoe = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.9, metalness: 0.1, flatShading: false });
+  const seatX = -0.46; // left-hand drive: driver sits on the left
+
+  const limb = (pos, dir, len, radius, mat) => {
+    const m = new THREE.Mesh(new THREE.CapsuleGeometry(radius, len, 12, 24), mat);
+    m.position.copy(pos);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+    m.castShadow = true; m.receiveShadow = true;
+    driver.add(m);
+    return m;
+  };
+
+  const hips = new THREE.Vector3(seatX, -0.05, 0.44);
+  const shoulders = new THREE.Vector3(seatX, 0.30, 0.32);
+  const torsoDir = new THREE.Vector3().subVectors(shoulders, hips).normalize();
+  limb(hips.clone().lerp(shoulders, 0.5), torsoDir, hips.distanceTo(shoulders), 0.135, matCloth);
+
+  const neck = new THREE.Mesh(new THREE.CapsuleGeometry(0.045, 0.14, 12, 16), matSkin);
+  neck.position.set(seatX, 0.42, 0.30);
+  neck.castShadow = true; driver.add(neck);
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.085, 32, 32), matSkin);
+  head.position.set(seatX + 0.01, 0.56, 0.27);
+  head.castShadow = true; driver.add(head);
+  driver.userData = { head };
+
+  // legs down to the pedals
+  const knee = new THREE.Vector3(seatX - 0.04, -0.10, 0.60);
+  const ankle = new THREE.Vector3(seatX - 0.04, -0.14, 0.72);
+  limb(hips.clone().lerp(knee, 0.5), new THREE.Vector3().subVectors(knee, hips).normalize(), hips.distanceTo(knee), 0.07, matCloth);
+  limb(knee.clone().lerp(ankle, 0.5), new THREE.Vector3().subVectors(ankle, knee).normalize(), knee.distanceTo(ankle), 0.06, matCloth);
+  const shoe = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.16, 12, 16), matShoe);
+  shoe.position.copy(ankle); shoe.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 1));
+  shoe.castShadow = true; driver.add(shoe);
+
+  // arms on the yoke, stopping before the rim (no hand meshes)
+  const lShoulder = new THREE.Vector3(seatX + 0.16, 0.26, 0.36);
+  const lWrist = new THREE.Vector3(seatX + 0.28, 0.21, 0.43);
+  limb(lShoulder.clone().lerp(lWrist, 0.5), new THREE.Vector3().subVectors(lWrist, lShoulder).normalize(), lShoulder.distanceTo(lWrist), 0.055, matCloth);
+  const rShoulder = new THREE.Vector3(seatX - 0.16, 0.26, 0.36);
+  const rWrist = new THREE.Vector3(seatX - 0.10, 0.21, 0.42);
+  limb(rShoulder.clone().lerp(rWrist, 0.5), new THREE.Vector3().subVectors(rWrist, rShoulder).normalize(), rShoulder.distanceTo(rWrist), 0.055, matCloth);
+
+  return driver;
 }
