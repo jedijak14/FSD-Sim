@@ -253,6 +253,84 @@ export function buildWorld() {
     makeBuilding(bx, z, 10 + Math.random() * 8, 12 + Math.random() * 14, 14 + Math.random() * 10);
   }
 
+  // ---------- city skyline (tall buildings at intervals) ----------
+  const skyMat = new THREE.MeshStandardMaterial({ color: 0x1a1e24, roughness: 0.6, metalness: 0.2, flatShading: false });
+  [150, 320, 500, 680, 860].forEach((z, i) => {
+    const side = i % 2 === 0 ? -1 : 1;
+    const bx = side * (LANE_W + 6);
+    const h = 24 + Math.random() * 16;
+    const skyscraper = new THREE.Group();
+    const main = new THREE.Mesh(new THREE.BoxGeometry(14, h, 12), skyMat);
+    main.position.y = h / 2; main.castShadow = true; main.receiveShadow = true; skyscraper.add(main);
+    // crown
+    const crown = new THREE.Mesh(new THREE.BoxGeometry(16, 2, 14), new THREE.MeshStandardMaterial({ color: 0x0f0f0f }));
+    crown.position.y = h + 1; crown.castShadow = true; skyscraper.add(crown);
+    // lit windows
+    const winMat = new THREE.MeshStandardMaterial({ color: 0xffdd88, emissive: 0x332200, emissiveIntensity: 0.8 });
+    const rows = Math.floor(h / 2.5);
+    const cols = 4;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (Math.random() > 0.7) {
+          const wd = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.4, 0.06), winMat);
+          wd.position.set(-7 + (c + 0.5) * 3.5, r * 2.5 + 1.25, 6.031);
+          skyscraper.add(wd);
+        }
+      }
+    }
+    skyscraper.position.set(bx, 0, z);
+    skyscraper.userData = { z, x: bx };
+    group.add(skyscraper);
+    buildings.push(skyscraper);
+  });
+
+  // ---------- street furniture & trees ----------
+  const treeMat = new THREE.MeshStandardMaterial({ color: 0x0d2a0d, roughness: 0.9, metalness: 0 });
+  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d2b1f, roughness: 0.9, metalness: 0 });
+  const benchMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.8, metalness: 0.2 });
+  [60, 180, 300, 420, 540, 660, 780].forEach((z, i) => {
+    const side = i % 2 === 0 ? -1 : 1;
+    const fx = side * (LANE_W + 6.5);
+    // tree
+    const tree = new THREE.Group();
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 3.5, 10), trunkMat);
+    trunk.position.y = 1.75; trunk.castShadow = true; tree.add(trunk);
+    const foliage = new THREE.Mesh(new THREE.ConeGeometry(1.6, 5, 8), treeMat);
+    foliage.position.y = 4.8; foliage.castShadow = true; tree.add(foliage);
+    tree.position.set(fx, 0, z + side * 3);
+    group.add(tree);
+    // bench
+    const bench = new THREE.Group();
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.1, 0.4), benchMat);
+    seat.position.set(0, 0.45, 0); seat.castShadow = true; bench.add(seat);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.5, 0.06), benchMat);
+    back.position.set(0, 0.8, -0.23); back.castShadow = true; bench.add(back);
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.4, 0.08), benchMat);
+    leg.position.set(-0.55, 0.22, 0); leg.castShadow = true; bench.add(leg);
+    const leg2 = leg.clone(); leg2.position.set(0.55, 0.22, 0); bench.add(leg2);
+    bench.position.set(fx, 0, z + side * 6);
+    group.add(bench);
+  });
+
+  // ---------- bus stops ----------
+  const busStopMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.4, metalness: 0.8 });
+  const glassMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, metalness: 0.9 });
+  [240, 480, 720].forEach((z, i) => {
+    const side = i % 2 === 0 ? -1 : 1;
+    const bsx = side * (LANE_W + 3);
+    const bs = new THREE.Group();
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.1, 4), busStopMat);
+    roof.position.set(0, 2.6, 0); roof.castShadow = true; bs.add(roof);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.6, 8), busStopMat);
+    pole.position.set(-1, 1.3, 0); pole.castShadow = true; bs.add(pole);
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 1.6), glassMat);
+    glass.position.set(-0.95, 1.5, 0.5); bs.add(glass);
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.4), new THREE.MeshStandardMaterial({ color: 0xffdd00, emissive: 0x332200 }));
+    sign.position.set(-1, 2.4, 0.06); bs.add(sign);
+    bs.position.set(bsx, 0, z + side * 2);
+    group.add(bs);
+  });
+
   // ---------- street lights ----------
   const streetLights = [];
   for (let z = 20; z < 900; z += 28) {

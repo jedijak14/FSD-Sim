@@ -225,9 +225,7 @@ async function main() {
     window._noteT = setTimeout(() => elNote.style.display = 'none', ms);
   }
 
-  toggleCamera();
-
-  // ---------- loop ----------
+  // ---------- start menu ----------\n  const startMenu = document.getElementById('startMenu');\n  const startBtn = document.getElementById('startBtn');\n  let gameStarted = false;\n  startBtn.addEventListener('click', () => {\n    startMenu.style.opacity = '0';\n    setTimeout(() => { startMenu.style.display = 'none'; }, 400);\n    gameStarted = true;\n    toggleCamera();\n    loop();\n    showNote('FSD-Sim ready. W/S drive · A/D steer · C camera · 1/2/3 Autopilot · P Autopark · T Tesla UI · L blinker');\n    Audio.start();\n  });\n\n  // ---------- loop ----------
   const clock = new THREE.Clock();
 
   function loop() {
@@ -248,36 +246,56 @@ async function main() {
       state.gear = 'D';
       state.blinker = autopilot.getBlinker();
     } else {
-      if (state.gear === 'D') { throttle = accel ? 1 : 0; brake = brakeKey ? 0.8 : 0; }
-      if (state.gear === 'R') { throttle = accel ? 0.6 : 0; brake = brakeKey ? 0.8 : 0; }
-      if (state.gear === 'N') { throttle = 0; brake = brakeKey ? 0.5 : 0; }
-      if (state.gear === 'P') { brake = 1; throttle = 0; }
+      // Smooth throttle / brake input (0 to 1)
+      const accelInput = accel ? 1 : 0;
+      const brakeInput = brakeKey ? 1 : 0;
+
+      let acc = 0;
+      if (state.gear === 'D' || state.gear === 'R') {
+        acc = accelInput * 28 - brakeInput * 38;
+      } else if (state.gear === 'N') {
+        acc = -brakeInput * 20;
+      }
+      // P gear: strong hold brake
+      if (state.gear === 'P') { acc = -Math.abs(state.speedKph) * 2; }
+    }
+
+    const sign = state.gear === 'R' ? -1 : 1;
+
+    if (!autopilot.isOn()) {
+      state.speedKph += acc * dt * sign;
+      state.speedKph = THREE.MathUtils.clamp(state.speedKph, -25, 115);
+
+      // natural drag / roll resistance
+      if (accelInput < 0.05 && brakeInput < 0.05) {
+        state.speedKph *= (1 - dt * 0.9);
+      }
+      if (Math.abs(state.speedKph) < 0.2) state.speedKph = 0;
+
+      state.z += (state.speedKph / 3.6) * dt * sign;
+
+      // speed-dependent steering (less sensitive at high speed)
+      const speedSteerFactor = Math.max(0.25, 1 - Math.abs(state.speedKph) / 120);
+      const maxSteer = state.gear === 'R' ? 1.0 : 1.6;
+      const steerSpeed = state.gear === 'R' ? 1.2 : 2.0;
 
       let targetSteer = 0;
       if (left) targetSteer = -1;
       if (right) targetSteer = 1;
-      steer = THREE.MathUtils.lerp(state.steer, targetSteer, 0.15);
+      steer = THREE.MathUtils.lerp(state.steer, targetSteer * maxSteer, dt * steerSpeed * speedSteerFactor);
       state.steer = steer;
       state.blinker = (Math.abs(steer) > 0.35) ? (steer > 0 ? 'right' : 'left') : 'off';
+
+      const laneTarget = state.steer * 2.6;
+      state.lane = THREE.MathUtils.lerp(state.lane, laneTarget, dt * 1.8 * speedSteerFactor);
+      state.x = state.lane;
     }
-
-    const sign = state.gear === 'R' ? -1 : 1;
-    const acc = throttle * 30 - brake * 42;
-    state.speedKph += acc * dt * sign;
-    state.speedKph = THREE.MathUtils.clamp(state.speedKph, -25, 115);
-    if (Math.abs(throttle) < 0.05 && brake < 0.05) state.speedKph *= (1 - dt * 1.1);
-    if (Math.abs(state.speedKph) < 0.3) state.speedKph = 0;
-
-    state.z += (state.speedKph / 3.6) * dt * sign;
-    const laneTarget = state.steer * 2.8;
-    state.lane = THREE.MathUtils.lerp(state.lane, laneTarget, dt * 2.0);
-    state.x = state.lane;
 
     // collision / FSD reaction
     const lead = nearestAhead(world, state.z, state.lane, 42);
     if (lead && lead.dz < 5) {
-      state.speedKph = Math.min(state.speedKph, lead.dz * 12);
-      brake = Math.max(brake, 0.7);
+      state.speedKph = Math.min(state.speedKph, lead.dz * 10);
+      brake = Math.max(brake, 0.8);
     }
 
     // audio

@@ -191,7 +191,7 @@ export class TeslaUI {
           <button class="browser-go" onclick="UI.goBrowser()">Go</button>
         </div>
         <div class="browser-view">
-          <iframe id="browserFrame" src="https://www.tesla.com" referrerpolicy="no-referrer-when-downgrade" sandbox="allow-same-origin allow-scripts allow-popups allow-forms"></iframe>
+          <iframe id="browserFrame" src="browser.html" referrerpolicy="no-referrer-when-downgrade" sandbox="allow-same-origin allow-scripts allow-popups allow-forms"></iframe>
         </div>
       </div>
     </div>
