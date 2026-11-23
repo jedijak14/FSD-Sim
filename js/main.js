@@ -225,7 +225,21 @@ async function main() {
     window._noteT = setTimeout(() => elNote.style.display = 'none', ms);
   }
 
-  // ---------- start menu ----------\n  const startMenu = document.getElementById('startMenu');\n  const startBtn = document.getElementById('startBtn');\n  let gameStarted = false;\n  startBtn.addEventListener('click', () => {\n    startMenu.style.opacity = '0';\n    setTimeout(() => { startMenu.style.display = 'none'; }, 400);\n    gameStarted = true;\n    toggleCamera();\n    loop();\n    showNote('FSD-Sim ready. W/S drive · A/D steer · C camera · 1/2/3 Autopilot · P Autopark · T Tesla UI · L blinker');\n    Audio.start();\n  });\n\n  // ---------- loop ----------
+  // ---------- start menu ----------
+  const startMenu = document.getElementById('startMenu');
+  const startBtn = document.getElementById('startBtn');
+  let gameStarted = false;
+  startBtn.addEventListener('click', () => {
+    startMenu.style.opacity = '0';
+    setTimeout(() => { startMenu.style.display = 'none'; }, 400);
+    gameStarted = true;
+    toggleCamera();
+    loop();
+    showNote('FSD-Sim ready. W/S drive · A/D steer · C camera · 1/2/3 Autopilot · P Autopark · T Tesla UI · L blinker');
+    Audio.start();
+  });
+
+  // ---------- loop ----------
   const clock = new THREE.Clock();
 
   function loop() {
