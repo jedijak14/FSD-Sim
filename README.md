@@ -49,7 +49,7 @@ Open [localhost:5173](http://localhost:5173). **Local development skips all logi
 
 This also applies to `npm run preview` after `npm run build`. Restart the local server after changing `.env`.
 
-**F** toggles local FSD · **J** toggles Jev autopilot · **WASD** to drive · **Space** to brake · **C** cycles chase, driver, first person and bird’s-eye cameras. First person puts you in the Model Y cabin with a Tesla-style center display showing speed, gear, navigation and the active driver.
+**F** toggles local FSD · **WASD** to drive · **Space** to brake · **C** cycles chase, driver, first person and bird’s-eye cameras. First person puts you in the Model Y cabin with a Tesla-style center display: status bar, gear strip, speed, power meter, surrounding traffic, speed limit, range, navigation, media and climate cards, and a bottom app bar.
 
 ## FSD design
 
