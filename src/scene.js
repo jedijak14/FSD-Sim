@@ -20,6 +20,7 @@ import { detailedCar } from "./vehicle-model.js";
 import { HDRLoader } from "three/addons/loaders/HDRLoader.js";
 import { assetManager, assetsReady } from "./asset-loading.js";
 import { renderProfile } from "./render-profile.js";
+import { TeslaScreen } from "./tesla-screen.js";
 let daylight;
 function daylightEnvironment() {
   return (daylight ||= new HDRLoader(assetManager)
@@ -65,21 +66,26 @@ function cyl(parent, r, h, x, y, z, color, segments = 8) {
   parent.add(m);
   return m;
 }
-// Minimal Model Y cabin: the touchscreen is drawn by the DOM overlay, while
-// these meshes give the first-person camera a real dashboard and wheel.
+// Minimal Model Y cabin: the Tesla touchscreen is a live canvas texture
+// mapped onto the 3D center display; the dashboard and wheel give the
+// first-person camera its real surroundings.
 function cockpitInterior() {
   const g = new THREE.Group();
+  const tesla = new TeslaScreen();
   box(g, 1.72, 0.13, 0.52, 0, 0.86, -0.97, "#191c21");
   box(g, 1.68, 0.045, 0.54, 0, 0.94, -0.97, "#2b3037");
-  box(g, 0.48, 0.31, 0.025, 0.11, 1.02, -1.08, "#05070a");
+  // Bezel
+  box(g, 0.5, 0.32, 0.025, 0.11, 1.02, -1.08, "#05070a");
   const screen = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.44, 0.27),
-    new THREE.MeshBasicMaterial({ color: "#0b2038" }),
+    new THREE.PlaneGeometry(0.462, 0.289),
+    new THREE.MeshBasicMaterial({
+      map: tesla.texture,
+      toneMapped: false,
+    }),
   );
-  screen.position.set(0.11, 1.02, -1.065);
+  screen.position.set(0.11, 1.02, -1.066);
   g.add(screen);
-  box(g, 0.34, 0.015, 0.006, 0.11, 1.08, -1.061, "#2e79c0");
-  box(g, 0.24, 0.015, 0.006, 0.11, 1.04, -1.061, "#1d4b7d");
+  g.userData.screen = tesla;
   box(g, 0.34, 0.14, 0.025, -0.38, 1.03, -1.05, "#070a0e");
   box(g, 0.38, 0.32, 0.5, 0.08, 0.64, -0.37, "#15181d");
   const steering = new THREE.Group();
@@ -844,6 +850,8 @@ export class DriveScene {
     this.wheelDirection = Math.sign(this.sim.player.speed) || 1;
     this.scene.add(this.player);
     this.cockpit = cockpitInterior();
+    this.screenState = null;
+    this.screenRefresh = 0;
     this.scene.add(this.cockpit);
     const playerGroup = this.player;
     const carReady = loadHeroCar()
@@ -1071,6 +1079,11 @@ export class DriveScene {
       this.cockpit.visible = firstPerson;
       this.cockpit.position.set(v.x, 0, v.z);
       this.cockpit.rotation.y = -v.heading;
+      this.screenRefresh -= dt;
+      if (firstPerson && this.screenRefresh <= 0) {
+        this.cockpit.userData.screen.update(this.screenState || {});
+        this.screenRefresh = 0.1;
+      }
     }
     for (const p of this.sim.traffic) {
       const m = this.vehicles.get(p.id);

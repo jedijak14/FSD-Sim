@@ -111,7 +111,7 @@ const keys = new Set(),
     intervals: [],
   };
 $("app").innerHTML = `
-<main class="drive-area" aria-label="3D driving simulator"><canvas id="world-canvas" aria-label="Interactive three-dimensional driving world"></canvas><div id="vector-labels" aria-label="Jev motion vector probabilities"></div><div id="tesla-ui" class="tesla-ui" aria-label="Tesla-style driver display" hidden><div class="tesla-screen"><div class="tesla-statusbar"><span class="tesla-lock" title="Doors locked">◆</span><span id="tesla-temp">21°C</span><span class="tesla-profile" title="Driver profile">A</span><span class="tesla-signal">LOCAL</span><span id="tesla-time">--:--</span></div><div class="tesla-body"><div class="tesla-left"><div class="tesla-gear-strip"><span data-gear="P">P</span><span data-gear="R">R</span><span data-gear="N">N</span><span data-gear="D">D</span></div><div class="tesla-speed-block"><strong id="tesla-speed">0</strong><span>km/h</span><div class="tesla-power"><i id="tesla-power-bar"></i></div><em id="tesla-power-label">0 kW</em></div></div><div class="tesla-center"><div class="tesla-visualization"><div class="tesla-grid"></div><div class="tesla-lanes"><span></span><span></span></div><div class="tesla-route"></div><div class="tesla-traffic"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="tesla-vehicle"></div><div class="tesla-limit"><small>LIMIT</small><strong id="tesla-limit">50</strong></div></div><div class="tesla-viz-caption"><span id="tesla-driver">MANUAL</span><span id="tesla-reason">Local FSD</span></div></div><div class="tesla-right"><div class="tesla-nav-card"><small>NAVIGATION</small><div class="tesla-nav-row"><strong id="tesla-maneuver">Continue straight</strong><span id="tesla-distance">in 0 m</span></div><div class="tesla-nav-meta"><span id="tesla-remaining">0 m left</span><span id="tesla-eta">~0 min</span></div><div class="tesla-nav-progress"><i id="tesla-nav-fill"></i></div></div><div class="tesla-cards"><div class="tesla-card"><small>MEDIA</small><strong>Local drive</strong><span>No account · no network</span></div><div class="tesla-card"><small>CLIMATE</small><div class="tesla-climate-temps"><span>21°</span><span>21°</span></div><span>Fan 3 · Auto</span></div><div class="tesla-card"><small>TRIP</small><strong id="tesla-trip">0.0 km</strong><span id="tesla-energy">SIM · 0.00 kWh</span></div></div></div></div><div class="tesla-appbar"><span class="active">◆</span><span>◇</span><span>♫</span><span>⌁</span><span>⌂</span><em>CONTROLS</em></div></div></div></main>
+<main class="drive-area" aria-label="3D driving simulator"><canvas id="world-canvas" aria-label="Interactive three-dimensional driving world"></canvas><div id="vector-labels" aria-label="Jev motion vector probabilities"></div></main>
 <header class="topbar glass"><a href="/" class="brand" aria-label="JevPilot by Standard Agents"><img class="brand-mark" src="/brand/standard-agents-mark.svg" alt=""/><b>JevPilot</b></a><div class="world-picker"><select id="world-select" aria-label="World environment"><option value="city">Skyline City</option><option value="town">Small town</option><option value="highway">Interstate 08</option></select><button id="new-world" title="Refresh world" aria-label="Refresh world">${icon("rotate-cw")}</button><a id="github-link" href="https://github.com/standardagents/jevpilot" target="_blank" rel="noopener noreferrer" aria-label="View JevPilot on GitHub (opens in a new tab)" title="View on GitHub">${icon("github")}</a></div></header>
 <div class="navigation-hud"><div class="navigation-card glass"><span id="turn-icon">${icon("arrow-up")}</span><div><strong id="next-maneuver">Continue straight</strong><span id="turn-distance"></span></div><span class="nav-divider"></span><span id="remaining"></span><button id="map-toggle" aria-label="Toggle route map" aria-pressed="true" title="Hide route map">${icon("map")}</button></div>
 <div id="minimap" class="minimap glass"><div class="minimap-toolbar" role="toolbar" aria-label="Minimap controls"><button id="map-drag" aria-label="Move minimap" title="Move minimap · drag or use arrow keys">${icon("grip")}</button><div><button id="map-zoom-out" aria-label="Zoom out" title="Zoom out">${icon("minus")}</button><button id="map-zoom-in" aria-label="Zoom in" title="Zoom in">${icon("plus")}</button><button id="map-reset" aria-label="Reset minimap" title="Reset map position, zoom and following">${icon("rotate-ccw")}</button></div></div><canvas id="map-canvas" width="380" height="310" aria-label="Route map. Drag to pan, scroll to zoom, double-click to follow the car."></canvas></div></div>
@@ -122,7 +122,7 @@ $("app").innerHTML = `
 <dialog id="credit-dialog" aria-labelledby="credit-title"><span class="eyebrow">THANKS FOR TAKING A DRIVE</span><h2 id="credit-title">That's your free lap.</h2><p>Your $0.25 of Jev play credit has been used. You can keep exploring with manual controls.</p><button id="credit-close" class="primary">Keep driving manually</button><a href="https://standardagents.ai/" target="_blank" rel="noopener noreferrer">Explore Standard Agents ↗</a></dialog>
 <div id="toast" role="status" hidden></div>
 <dialog id="json-dialog"><div class="json-header"><div>${icon("braces")}<strong>Under the hood</strong><span id="json-live">LIVE · 4 Hz</span></div><button id="close-json" aria-label="Close JSON inspector">${icon("x")}</button></div><div class="json-toolbar"><div class="json-tabs"><button data-tab="request" class="active">Jev input</button><button data-tab="sensor">Perception</button><button data-tab="world">Full world</button><button data-tab="decision">Response</button></div><div class="json-actions"><button id="freeze-json">Freeze</button><button id="copy-json" aria-label="Copy displayed JSON">${icon("copy")} <span id="copy-json-label" aria-live="polite">Copy</span></button><button id="download-json">${icon("download")} Download</button></div></div><p id="json-description">Exact Jev API payload, including instructions and offered choices. Full geometry and control details stay local.</p><pre id="json-content"></pre></dialog>
-<dialog id="help-dialog"><button id="close-help" class="dialog-close" aria-label="Close help">${icon("x")}</button><span class="eyebrow">YOUR NEXT DRIVE</span><h2>Take the wheel.</h2><p class="touch-help">Use the thumbstick to steer. Push up to accelerate, pull down to brake and reverse. Release to coast; hold Brake to stop.</p><div class="help-keys"><span><kbd>W / ↑</kbd> Hold accelerator</span><span><kbd>S / ↓</kbd> Brake / reverse</span><span><kbd>A / D</kbd> Steer</span><span><kbd>SPACE</kbd> Brake</span><span><kbd>F</kbd> Local FSD (no sign-in)</span><span><kbd>C</kbd> Camera</span><span><kbd>P</kbd> Pause</span><span><kbd>?</kbd> Keyboard help</span></div><p>Drag the scene to orbit in Chase or Bird’s eye; drag to look around in Driver or First person view. First person puts you in the driver’s seat with a Tesla-style console showing speed, power, range, traffic, navigation, media and climate. Scroll to zoom outside; double-click to recenter. Tap A/D for small corrections; hold for a sharper turn and release to recenter. Hold W to accelerate; release to coast with drag. S brakes, then reverses once stopped. Space applies the brake. Autopilot sets target speed directly.</p><p>The bright blue line is the active driving plan on the road ahead. Use Candidates to see the sampled paths: forward in blue/cyan, reverse in purple, lane departures in amber, and predicted collisions in orange. Choice probabilities are available in the JSON inspector. The safety brake can reduce speed for a missed hazard; safety interventions are reported in the drive status.</p><p class="asset-credits">Vehicle: <a href="https://sketchfab.com/3d-models/tesla-model-y-2021-c0a86cac582d4b33aba0fb1b1912d970" target="_blank" rel="noreferrer">Tesla Model Y 2021</a> by 763468712, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>. Geometry adapted by Tina 3D Tesla; optimized, re-materialed, and wheel-rigged for JevPilot. Tree, shrub, streetlight, surface textures and sky: <a href="https://polyhaven.com" target="_blank" rel="noreferrer">Poly Haven</a>, CC0.</p><p>Driving keys take back control. Use the JSON button for live inputs, full world state, probabilities, and session telemetry.</p></dialog>`;
+<dialog id="help-dialog"><button id="close-help" class="dialog-close" aria-label="Close help">${icon("x")}</button><span class="eyebrow">YOUR NEXT DRIVE</span><h2>Take the wheel.</h2><p class="touch-help">Use the thumbstick to steer. Push up to accelerate, pull down to brake and reverse. Release to coast; hold Brake to stop.</p><div class="help-keys"><span><kbd>W / ↑</kbd> Hold accelerator</span><span><kbd>S / ↓</kbd> Brake / reverse</span><span><kbd>A / D</kbd> Steer</span><span><kbd>SPACE</kbd> Brake</span><span><kbd>F</kbd> Local FSD (no sign-in)</span><span><kbd>C</kbd> Camera</span><span><kbd>P</kbd> Pause</span><span><kbd>?</kbd> Keyboard help</span></div><p>Drag the scene to orbit in Chase or Bird’s eye; drag to look around in Driver or First person view. First person puts you in the driver’s seat with a live Tesla-style center screen on the dash: parked it shows the car view with media and navigate cards; while driving it shows speed, power, traffic, speed limit and navigation. Scroll to zoom outside; double-click to recenter. Tap A/D for small corrections; hold for a sharper turn and release to recenter. Hold W to accelerate; release to coast with drag. S brakes, then reverses once stopped. Space applies the brake. Autopilot sets target speed directly.</p><p>The bright blue line is the active driving plan on the road ahead. Use Candidates to see the sampled paths: forward in blue/cyan, reverse in purple, lane departures in amber, and predicted collisions in orange. Choice probabilities are available in the JSON inspector. The safety brake can reduce speed for a missed hazard; safety interventions are reported in the drive status.</p><p class="asset-credits">Vehicle: <a href="https://sketchfab.com/3d-models/tesla-model-y-2021-c0a86cac582d4b33aba0fb1b1912d970" target="_blank" rel="noreferrer">Tesla Model Y 2021</a> by 763468712, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>. Geometry adapted by Tina 3D Tesla; optimized, re-materialed, and wheel-rigged for JevPilot. Tree, shrub, streetlight, surface textures and sky: <a href="https://polyhaven.com" target="_blank" rel="noreferrer">Poly Haven</a>, CC0.</p><p>Driving keys take back control. Use the JSON button for live inputs, full world state, probabilities, and session telemetry.</p></dialog>`;
 $("app").insertAdjacentHTML(
   "beforeend",
   `
@@ -369,8 +369,6 @@ async function finishLoading() {
 }
 function syncCameraUI() {
   const firstPerson = scene.mode === "cockpit";
-  $("tesla-ui").hidden = !firstPerson;
-  document.body.classList.toggle("first-person", firstPerson);
   $("camera-name").textContent = {
     chase: "Chase",
     hood: "Driver",
@@ -885,8 +883,11 @@ function drawMap() {
   map.restore();
 }
 
-function updateTeslaUI(nav, fsdState) {
-  if ($("tesla-ui").hidden) return;
+// Feed the 3D Tesla center screen (a canvas texture inside the cockpit
+// mesh) the state it needs to draw itself. Runs every frame; drawing is
+// throttled inside the scene renderer.
+function updateScreenState(nav, fsdState) {
+  if (scene.mode !== "cockpit") return;
   const v = sim.player,
     speedKmh = Math.round(Math.abs(v.speed) * 3.6),
     limit = Math.round(
@@ -900,24 +901,18 @@ function updateTeslaUI(nav, fsdState) {
         : v.speed < 0.2 && Math.abs(v.target) < 0.2
           ? "N"
           : "D";
-  for (const key of document.querySelectorAll("#tesla-ui [data-gear]"))
-    key.classList.toggle("active", key.dataset.gear === gear);
-
-  $("tesla-speed").textContent = speedKmh;
-  $("tesla-limit").textContent = limit;
-  $("tesla-limit").closest(".tesla-limit").classList.toggle("over", speedKmh > limit);
   const power = Math.round(clamp((v.target - v.speed) * 6, -45, 90));
-  $("tesla-power-label").textContent =
-    sim.brakeReason || power < -4
-      ? `REGEN ${Math.abs(power)} kW`
-      : `${power} kW`;
-  $("tesla-power-bar").style.setProperty(
-    "--power",
-    `${clamp(Math.abs(power) / 90, 0, 1) * 50}%`,
-  );
-  $("tesla-power-bar").classList.toggle("regen", power < 0);
-
-  const dots = $("tesla-traffic").children;
+  const regen = !!sim.brakeReason || power < -4;
+  const maneuver =
+    nav.instruction ||
+    (nav.next_turn === "arrive"
+      ? "Destination ahead"
+      : nav.next_turn === "uturn"
+        ? "Make a U-turn"
+        : nav.next_turn === "straight"
+          ? "Continue straight"
+          : `Turn ${nav.next_turn}`);
+  const pace = Math.max(4, Math.abs(v.target || v.speed || 8));
   const nearby = sim.traffic
     .map((t) => {
       const dx = t.x - v.x,
@@ -928,54 +923,34 @@ function updateTeslaUI(nav, fsdState) {
       };
     })
     .filter((p) => p.ahead > -12 && p.ahead < 55 && Math.abs(p.right) < 12)
-    .slice(0, dots.length);
-  for (let i = 0; i < dots.length; i++) {
-    const p = nearby[i];
-    dots[i].hidden = !p;
-    if (!p) continue;
-    dots[i].style.left = `${clamp(50 + p.right * 3.3, 4, 96)}%`;
-    dots[i].style.top = `${clamp(100 - (p.ahead / 55) * 100, 4, 96)}%`;
-  }
-
-  $("tesla-maneuver").textContent =
-    nav.instruction ||
-    (nav.next_turn === "arrive"
-      ? "Destination ahead"
-      : nav.next_turn === "uturn"
-        ? "Make a U-turn"
-        : nav.next_turn === "straight"
-          ? "Continue straight"
-          : `Turn ${nav.next_turn}`);
-  $("tesla-distance").textContent =
-    nav.next_turn === "arrive"
-      ? "at your destination"
-      : `in ${Math.round(nav.turn_distance_m)} m`;
-  $("tesla-remaining").textContent =
-    nav.remaining_m >= 1000
-      ? `${(nav.remaining_m / 1000).toFixed(1)} km left`
-      : `${Math.round(nav.remaining_m)} m left`;
-  const pace = Math.max(4, Math.abs(v.target || v.speed || 8));
-  $("tesla-eta").textContent = `~${Math.max(1, Math.round(nav.remaining_m / pace / 60))} min`;
-  const routeLength = v.route?.length || nav.remaining_m || 1;
-  $("tesla-nav-fill").style.width = `${clamp((1 - nav.remaining_m / routeLength) * 100, 0, 100)}%`;
-
-  $("tesla-trip").textContent = `${(sim.distance / 1000).toFixed(1)} km`;
-  $("tesla-energy").textContent = `SIM · ${((sim.distance / 1000) * 0.16).toFixed(2)} kWh`;
-  $("tesla-driver").textContent = sim.fsdActive
-    ? "FSD ACTIVE"
-    : sim.autopilot
-      ? "AUTOPILOT"
-      : "MANUAL";
-  $("tesla-reason").textContent = sim.fsdActive
-    ? fsdState.reason
-    : sim.autopilot
-      ? $("pilot-state").textContent
-      : "WASD to drive";
-  $("tesla-time").textContent = new Date().toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  $("tesla-ui").dataset.turn = nav.next_turn || "straight";
+    .slice(0, 8);
+  scene.screenState = {
+    gear,
+    speedKmh,
+    powerKw: sim.brakeReason ? -Math.max(Math.abs(power), 20) : power,
+    regen,
+    limitKmh: limit,
+    batteryPct: 90,
+    tempF: 72,
+    fsdActive: sim.fsdActive,
+    autopilot: sim.autopilot,
+    paused: !!sim.paused,
+    maneuver,
+    turnDistanceM: nav.turn_distance_m ?? 0,
+    remainingM: nav.remaining_m ?? 0,
+    etaMin: Math.max(1, Math.round((nav.remaining_m ?? 0) / pace / 60)),
+    turn: nav.next_turn || "straight",
+    traffic: nearby,
+    timeStr: new Date()
+      .toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
+      .replace(/\s/g, "")
+      .toLowerCase(),
+    reason: sim.fsdActive ? fsdState.reason : "",
+  };
 }
 
 function updateUI() {
@@ -1077,7 +1052,7 @@ function updateUI() {
       syncPilot();
     }
   }
-  updateTeslaUI(nav, fsdState);
+  updateScreenState(nav, fsdState);
   if ($("json-dialog").open) renderJSON();
 }
 function animate(now) {
