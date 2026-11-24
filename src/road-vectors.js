@@ -176,7 +176,7 @@ export class RoadVectors {
     this.group.visible = false;
     this.layer.hidden = true;
   }
-  render(car, camera, width, height, dt, active, paused) {
+  render(car, camera, width, height, dt, active, paused, guidance = null) {
     const age = paused ? 0 : performance.now() - this.received;
     const weights = active
       ? vectorWeights(this.answer, this.answeredPlan?.eligible, age)
@@ -184,13 +184,18 @@ export class RoadVectors {
     const chosen = weights
       ? this.answeredPlan.projections[this.answer.choice]
       : null;
+    // The local driver has no Jev answer to draw. Show the same bright blue
+    // ribbon along the route so the active plan is always visible.
+    const hasGuidance = !chosen && this.enabled && guidance?.length > 1;
     const visible =
-      (this.enabled && !!chosen) || (this.showCandidates && !!this.plan);
+      (this.enabled && !!chosen) ||
+      hasGuidance ||
+      (this.showCandidates && !!this.plan);
     this.group.visible = visible;
     this.layer.hidden = !visible;
     if (!visible) return;
     this.selected.visible = this.selectedGlow.visible =
-      this.enabled && !!chosen;
+      this.enabled && (!!chosen || hasGuidance);
     const plan = chosen ? this.answeredPlan : this.plan;
     for (const mesh of this.group.children) {
       mesh.material.uniforms.ego.value.set(car.x, car.z, car.heading);
@@ -200,6 +205,13 @@ export class RoadVectors {
       );
     }
     let selectedPoints = null;
+    if (hasGuidance) {
+      updateRibbon(this.selected, guidance, 0.2, 0.25);
+      updateRibbon(this.selectedGlow, guidance, 0.5, 0.195);
+      this.selected.material.uniforms.alpha.value = 0.9;
+      this.selectedGlow.material.uniforms.alpha.value = 0.15;
+      this.selected.renderOrder = 5;
+    }
     if (chosen && this.enabled) {
       const candidate = this.answeredPlan.vectors[this.answer.choice];
       const displayed = animatePath(

@@ -3,7 +3,8 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { signalState } from "./world.js";
 import { RoadVectors } from "./road-vectors.js";
 import { CrashEffects } from "./crash-effects.js";
-import { dist } from "./math.js";
+import { clamp, dist, nearestOnPath, pointAt } from "./math.js";
+import { VECTOR_STEPS } from "./planning.js";
 import {
   materials as M,
   material as mat,
@@ -63,6 +64,48 @@ function cyl(parent, r, h, x, y, z, color, segments = 8) {
   m.castShadow = true;
   parent.add(m);
   return m;
+}
+// Minimal Model Y cabin: the touchscreen is drawn by the DOM overlay, while
+// these meshes give the first-person camera a real dashboard and wheel.
+function cockpitInterior() {
+  const g = new THREE.Group();
+  box(g, 1.72, 0.13, 0.52, 0, 0.86, -0.97, "#191c21");
+  box(g, 1.68, 0.045, 0.54, 0, 0.94, -0.97, "#2b3037");
+  box(g, 0.48, 0.31, 0.025, 0.11, 1.02, -1.08, "#05070a");
+  const screen = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.44, 0.27),
+    new THREE.MeshBasicMaterial({ color: "#0b2038" }),
+  );
+  screen.position.set(0.11, 1.02, -1.065);
+  g.add(screen);
+  box(g, 0.34, 0.015, 0.006, 0.11, 1.08, -1.061, "#2e79c0");
+  box(g, 0.24, 0.015, 0.006, 0.11, 1.04, -1.061, "#1d4b7d");
+  box(g, 0.34, 0.14, 0.025, -0.38, 1.03, -1.05, "#070a0e");
+  box(g, 0.38, 0.32, 0.5, 0.08, 0.64, -0.37, "#15181d");
+  const steering = new THREE.Group();
+  steering.position.set(-0.38, 1.02, -0.8);
+  steering.rotation.x = -0.38;
+  g.add(steering);
+  const rim = new THREE.Mesh(
+    new THREE.TorusGeometry(0.19, 0.022, 10, 36),
+    mat("#23272d"),
+  );
+  steering.add(rim);
+  const hub = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.055, 0.055, 0.035, 12),
+    mat("#16191e"),
+  );
+  hub.rotation.x = Math.PI / 2;
+  steering.add(hub);
+  for (const angle of [-Math.PI / 2, Math.PI / 6, (5 * Math.PI) / 6]) {
+    const spoke = box(steering, 0.25, 0.018, 0.012, 0, 0, 0, "#1b1f25");
+    spoke.rotation.z = angle;
+  }
+  g.traverse((o) => {
+    if (o.isMesh) o.castShadow = o.receiveShadow = false;
+  });
+  g.visible = false;
+  return g;
 }
 function label(text, bg = "#f2eee4", fg = "#304c46", w = 128, h = 64) {
   const c = document.createElement("canvas");
@@ -800,6 +843,8 @@ export class DriveScene {
     this.wheelDistance = this.sim.distance;
     this.wheelDirection = Math.sign(this.sim.player.speed) || 1;
     this.scene.add(this.player);
+    this.cockpit = cockpitInterior();
+    this.scene.add(this.cockpit);
     const playerGroup = this.player;
     const carReady = loadHeroCar()
       .then((model) => {
@@ -1015,11 +1060,18 @@ export class DriveScene {
         v.speed,
       );
     this.wheelDistance = this.sim.distance;
-    const insideCar = this.mode === "hood" && !this.sim.crash;
+    const firstPerson = this.mode === "cockpit" && !this.sim.crash;
+    const insideCar =
+      (this.mode === "hood" || firstPerson) && !this.sim.crash;
     this.player.traverse((mesh) => {
       if (mesh.isMesh && mesh.material.name === "Glass")
         mesh.visible = !insideCar;
     });
+    if (this.cockpit) {
+      this.cockpit.visible = firstPerson;
+      this.cockpit.position.set(v.x, 0, v.z);
+      this.cockpit.rotation.y = -v.heading;
+    }
     for (const p of this.sim.traffic) {
       const m = this.vehicles.get(p.id);
       if (m) {
@@ -1091,13 +1143,16 @@ export class DriveScene {
         v.z + Math.cos(v.heading) * 12 + Math.sin(v.heading) * 8 * side,
       );
       look = new THREE.Vector3(v.x, 0.7, v.z);
-    } else if (this.mode === "hood") {
+    } else if (this.mode === "hood" || this.mode === "cockpit") {
       const view = this.cameraInput.current();
       const forward = this.player.userData.eyeForward ?? 0.15;
+      const seated = this.mode === "cockpit";
+      const lateral = seated ? 0.38 : 0.3;
+      const eyeHeight = (this.player.userData.eyeHeight || 1.27) - (seated ? 0.07 : 0);
       pos = new THREE.Vector3(
-        v.x + Math.sin(v.heading) * forward - Math.cos(v.heading) * 0.3,
-        this.player.userData.eyeHeight || 1.27,
-        v.z - Math.cos(v.heading) * forward - Math.sin(v.heading) * 0.3,
+        v.x + Math.sin(v.heading) * forward - Math.cos(v.heading) * lateral,
+        eyeHeight,
+        v.z - Math.cos(v.heading) * forward - Math.sin(v.heading) * lateral,
       );
       const yaw = v.heading + view.yaw;
       look = pos
@@ -1141,6 +1196,14 @@ export class DriveScene {
     this.snap = false;
     this.sun.position.set(v.x - 55, 85, v.z + 50);
     this.sun.target.position.set(v.x, 0, v.z);
+    let guidance = null;
+    if (!this.sim.crash && v.route?.points?.length) {
+      const near = nearestOnPath(v, v.route.points);
+      const horizon = clamp(14 + Math.abs(v.speed) * 2, 22, 65);
+      guidance = Array.from({ length: VECTOR_STEPS + 1 }, (_, i) =>
+        pointAt(v.route.points, near.s + (horizon * i) / VECTOR_STEPS),
+      );
+    }
     this.vectors.render(
       v,
       this.camera,
@@ -1149,6 +1212,7 @@ export class DriveScene {
       dt,
       this.sim.autopilot,
       this.sim.paused,
+      guidance,
     );
 
     if (draw) this.renderer.render(this.scene, this.camera);

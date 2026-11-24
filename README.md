@@ -26,7 +26,7 @@ The simulator samples fresh steering-and-speed combinations for each decision. O
 
 An explicit `driving_style` describes an aggressive driver: keep progressing, stop at the actual line, and close gaps before stopping behind an obstacle. Jev can choose an approach path that progressively slows to a stop 0.5 m before the line. An immediate **stop** is offered only within 2.5 m of a blocker or required stop line, at the destination, or when no eligible moving path exists. Candidate speeds taper near required stops. Jev receives recent-stop memory and collision timing; a safety brake handles collision risks.
 
-Use **Candidates** to show the sampled paths: blue/cyan for forward, purple for reverse, amber for paths leaving the lane, orange for predicted collisions, and bright blue for Jev’s selection. Candidate generation and route searches run in a background worker; the renderer smoothly blends the sampled shapes. Open **JSON** to inspect road boundaries, recovery state, and actual choice probabilities.
+The bright blue ribbon on the road is the active plan: local FSD draws the route ahead, and Jev’s selected three-second path replaces it when Jev is driving. Use **Candidates** to show the other sampled paths: blue/cyan for forward, purple for reverse, amber for paths leaving the lane, orange for predicted collisions. Candidate generation and route searches run in a background worker; the renderer smoothly blends the sampled shapes. Open **JSON** to inspect road boundaries, recovery state, and actual choice probabilities.
 
 Requests run up to 4 times/second near turns or traffic, and about 1.5 times/second on clear roads. Questions with one eligible answer are resolved locally. **JSON → Jev input** shows the exact API payload; the cost tooltip and response tab show average payload size and billed input tokens.
 
@@ -49,7 +49,7 @@ Open [localhost:5173](http://localhost:5173). **Local development skips all logi
 
 This also applies to `npm run preview` after `npm run build`. Restart the local server after changing `.env`.
 
-**F** toggles local FSD · **J** toggles Jev autopilot · **WASD** to drive · **Space** to brake.
+**F** toggles local FSD · **J** toggles Jev autopilot · **WASD** to drive · **Space** to brake · **C** cycles chase, driver, first person and bird’s-eye cameras. First person puts you in the Model Y cabin with a Tesla-style center display showing speed, gear, navigation and the active driver.
 
 ## FSD design
 

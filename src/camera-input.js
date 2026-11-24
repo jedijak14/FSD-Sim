@@ -20,7 +20,7 @@ export class CameraInput {
       pointer.x = event.clientX;
       pointer.y = event.clientY;
       const state = this.current();
-      if (getMode() === "hood") {
+      if (getMode() === "hood" || getMode() === "cockpit") {
         state.yaw = clamp(state.yaw + dx * 0.004, -2.1, 2.1);
         state.pitch = clamp(state.pitch - dy * 0.003, -0.65, 0.65);
       } else {
@@ -39,7 +39,7 @@ export class CameraInput {
     canvas.addEventListener(
       "wheel",
       (event) => {
-        if (getMode() === "hood") return;
+        if (getMode() === "hood" || getMode() === "cockpit") return;
         event.preventDefault();
         const state = this.current();
         state.distance = clamp(
@@ -60,6 +60,7 @@ export class CameraInput {
       chase: { yaw: 0, pitch: 0.48, distance: 20 },
       map: { yaw: 0, pitch: 1.25, distance: 150 },
       hood: { yaw: 0, pitch: 0, distance: 0 },
+      cockpit: { yaw: 0, pitch: -0.045, distance: 0 },
     };
   }
 }
