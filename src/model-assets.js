@@ -62,6 +62,7 @@ export async function loadHeroCar() {
       color: "#24282c",
       roughness: 0.85,
     });
+    leather.name = "Interior";
     // This source faces -X. Normalize it to the simulation's -Z forward.
     scene.rotation.y = -Math.PI / 2;
     scene.updateMatrixWorld(true);

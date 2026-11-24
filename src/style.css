@@ -425,18 +425,6 @@ kbd {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.cost-total {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  white-space: nowrap;
-  font-size: 9px;
-  color: #6b7077;
-}
-.cost-total strong {
-  font: 500 10px monospace;
-  color: #44484f;
-}
 .vector-label {
   position: absolute;
   top: 0;
@@ -991,13 +979,6 @@ dialog::backdrop {
     max-width: 100px;
     line-height: 1.5;
   }
-  .cost-total {
-    font-size: 8px;
-    gap: 4px;
-  }
-  .cost-total strong {
-    font-size: 9px;
-  }
   .vector-label {
     font-size: 8px;
     padding: 3px 4px;
@@ -1404,29 +1385,5 @@ body.crashed .world-picker {
 
 #sign-out[hidden] {
   display: none;
-}
-#credit-dialog {
-  width: min(390px, calc(100% - 32px));
-  padding: 32px;
-  text-align: center;
-  border: 0;
-  border-radius: 20px;
-}
-#credit-dialog h2 {
-  font-size: 25px;
-  letter-spacing: -0.8px;
-  margin: 16px 0 12px;
-}
-#credit-dialog p {
-  font-size: 13px;
-  color: #737985;
-  line-height: 1.7;
-  margin-bottom: 22px;
-}
-#credit-dialog a {
-  display: block;
-  margin-top: 18px;
-  font-size: 11px;
-  color: #737985;
 }
 

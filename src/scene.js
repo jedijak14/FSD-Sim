@@ -21,6 +21,7 @@ import { HDRLoader } from "three/addons/loaders/HDRLoader.js";
 import { assetManager, assetsReady } from "./asset-loading.js";
 import { renderProfile } from "./render-profile.js";
 import { TeslaScreen } from "./tesla-screen.js";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 let daylight;
 function daylightEnvironment() {
   return (daylight ||= new HDRLoader(assetManager)
@@ -66,45 +67,80 @@ function cyl(parent, r, h, x, y, z, color, segments = 8) {
   parent.add(m);
   return m;
 }
-// Minimal Model Y cabin: the Tesla touchscreen is a live canvas texture
-// mapped onto the 3D center display; the dashboard and wheel give the
-// first-person camera its real surroundings.
+// Model Y cabin from the driver's seat. The 15.4" landscape center display
+// sits on the dash to the right of the wheel, yawed toward the driver, with
+// the live Tesla UI mapped onto the glass.
 function cockpitInterior() {
   const g = new THREE.Group();
   const tesla = new TeslaScreen();
-  box(g, 1.72, 0.13, 0.52, 0, 0.86, -0.97, "#191c21");
-  box(g, 1.68, 0.045, 0.54, 0, 0.94, -0.97, "#2b3037");
-  // Bezel
-  box(g, 0.5, 0.32, 0.025, 0.11, 1.02, -1.08, "#05070a");
+  const dark = (color) => new THREE.MeshBasicMaterial({ color });
+
+  // Lower dash and top cowl. Screen sits ON this surface, not inside it.
+  box(g, 1.62, 0.18, 0.52, 0.06, 0.72, -0.74, "#1c2026");
+  box(g, 1.64, 0.05, 0.46, 0.06, 0.84, -0.78, "#2a3038");
+  // Soft crash pad under the windshield
+  box(g, 1.66, 0.06, 0.24, 0.04, 0.91, -0.98, "#15181d");
+  // Instrument hood over the wheel
+  box(g, 0.44, 0.07, 0.2, -0.38, 0.92, -0.68, "#12151a");
+  // Center console
+  box(g, 0.3, 0.26, 0.58, 0.1, 0.5, -0.26, "#14171c");
+  box(g, 0.26, 0.02, 0.36, 0.1, 0.64, -0.22, "#0d0f12");
+
+  // Landscape 15.4" assembly: ~0.33 × 0.21 m glass in a thick rounded bezel,
+  // reclined toward the windshield and yawed toward the driver.
+  const display = new THREE.Group();
+  display.position.set(0.12, 1.0, -0.92);
+  display.rotation.set(-0.12, -0.28, 0.03);
+  g.add(display);
+
+  const neck = new THREE.Mesh(
+    new RoundedBoxGeometry(0.08, 0.09, 0.05, 2, 0.012),
+    dark("#0b0d10"),
+  );
+  neck.position.set(0, -0.145, 0.01);
+  display.add(neck);
+
+  const bezel = new THREE.Mesh(
+    new RoundedBoxGeometry(0.4, 0.255, 0.024, 3, 0.012),
+    dark("#050608"),
+  );
+  display.add(bezel);
+
+  const lip = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.376, 0.234),
+    dark("#111318"),
+  );
+  lip.position.z = 0.0124;
+  display.add(lip);
+
   const screen = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.462, 0.289),
+    new THREE.PlaneGeometry(0.364, 0.226),
     new THREE.MeshBasicMaterial({
       map: tesla.texture,
       toneMapped: false,
     }),
   );
-  screen.position.set(0.11, 1.02, -1.066);
-  g.add(screen);
+  screen.position.z = 0.0122;
+  display.add(screen);
   g.userData.screen = tesla;
-  box(g, 0.34, 0.14, 0.025, -0.38, 1.03, -1.05, "#070a0e");
-  box(g, 0.38, 0.32, 0.5, 0.08, 0.64, -0.37, "#15181d");
+
   const steering = new THREE.Group();
-  steering.position.set(-0.38, 1.02, -0.8);
-  steering.rotation.x = -0.38;
+  steering.position.set(-0.38, 0.9, -0.58);
+  steering.rotation.x = -0.32;
   g.add(steering);
   const rim = new THREE.Mesh(
-    new THREE.TorusGeometry(0.19, 0.022, 10, 36),
+    new THREE.TorusGeometry(0.175, 0.02, 10, 36),
     mat("#23272d"),
   );
   steering.add(rim);
   const hub = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.055, 0.055, 0.035, 12),
+    new THREE.CylinderGeometry(0.05, 0.05, 0.032, 12),
     mat("#16191e"),
   );
   hub.rotation.x = Math.PI / 2;
   steering.add(hub);
   for (const angle of [-Math.PI / 2, Math.PI / 6, (5 * Math.PI) / 6]) {
-    const spoke = box(steering, 0.25, 0.018, 0.012, 0, 0, 0, "#1b1f25");
+    const spoke = box(steering, 0.22, 0.016, 0.012, 0, 0, 0, "#1b1f25");
     spoke.rotation.z = angle;
   }
   g.traverse((o) => {
@@ -1072,8 +1108,10 @@ export class DriveScene {
     const insideCar =
       (this.mode === "hood" || firstPerson) && !this.sim.crash;
     this.player.traverse((mesh) => {
-      if (mesh.isMesh && mesh.material.name === "Glass")
-        mesh.visible = !insideCar;
+      if (!mesh.isMesh) return;
+      const name = mesh.material?.name;
+      if (name === "Glass") mesh.visible = !insideCar;
+      if (name === "Interior") mesh.visible = !firstPerson;
     });
     if (this.cockpit) {
       this.cockpit.visible = firstPerson;
@@ -1158,10 +1196,12 @@ export class DriveScene {
       look = new THREE.Vector3(v.x, 0.7, v.z);
     } else if (this.mode === "hood" || this.mode === "cockpit") {
       const view = this.cameraInput.current();
-      const forward = this.player.userData.eyeForward ?? 0.15;
       const seated = this.mode === "cockpit";
-      const lateral = seated ? 0.38 : 0.3;
-      const eyeHeight = (this.player.userData.eyeHeight || 1.27) - (seated ? 0.07 : 0);
+      // Sit far enough back that the center display lands in the lower-right
+      // of the windshield view instead of off-frame at 50°.
+      const forward = seated ? 0.16 : (this.player.userData.eyeForward ?? 0.15);
+      const lateral = seated ? 0.34 : 0.3;
+      const eyeHeight = (this.player.userData.eyeHeight || 1.27) - (seated ? 0.05 : 0);
       pos = new THREE.Vector3(
         v.x + Math.sin(v.heading) * forward - Math.cos(v.heading) * lateral,
         eyeHeight,

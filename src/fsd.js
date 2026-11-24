@@ -1,5 +1,6 @@
 import {
   angle,
+  blockedByBuilding,
   clamp,
   dist,
   heading,
@@ -16,21 +17,22 @@ import { recoveryBlocked } from "./driving-plan.js";
 
 const RECOVERY_DISTANCE_M = 6;
 const STOP_LINE_MARGIN_M = 0.65;
-const STOP_LINE_DECELERATION = 4;
-const CURVE_LATERAL_ACCELERATION = 3.5;
+const STOP_LINE_DECELERATION = 4.2;
+const CURVE_LATERAL_ACCELERATION = 3.2;
 const DESTINATION_MARGIN_M = 1;
-const COMFORTABLE_ACCELERATION = 3.5;
-const RECOVERY_SPEED = 1.5;
+const COMFORTABLE_ACCELERATION = 3.2;
+const RECOVERY_SPEED = 2.2;
+const HOLD_ROAD_SPEED = 4.5;
 
 // Look far enough ahead to brake for a bend before entering it. A speed limit
 // at the corner alone is too late at motorway speeds: the approach cap is the
 // speed from which the car can still slow down over the remaining distance.
 function curveSpeed(route, from, speed) {
-  const step = 6;
+  const step = 4;
   const horizon = clamp(
-    (speed * speed) / (2 * STOP_LINE_DECELERATION) + 20,
-    36,
-    140,
+    (speed * speed) / (2 * STOP_LINE_DECELERATION) + 24,
+    40,
+    160,
   );
   let limit = Infinity;
   for (let ahead = step; ahead <= horizon; ahead += step) {
@@ -40,9 +42,9 @@ function curveSpeed(route, from, speed) {
     const headingB = b.heading ?? headingA;
     const change = Math.abs(angle(headingB - headingA));
     if (change < 0.002) continue;
-    const radius = step / change;
-    const corner = Math.sqrt(CURVE_LATERAL_ACCELERATION * radius) + 0.5;
-    const room = Math.max(0, ahead - 2);
+    const radius = Math.max(2.4, step / change);
+    const corner = Math.sqrt(CURVE_LATERAL_ACCELERATION * radius) + 0.4;
+    const room = Math.max(0, ahead - 3);
     limit = Math.min(
       limit,
       Math.sqrt(corner * corner + 2 * STOP_LINE_DECELERATION * room),
@@ -51,12 +53,23 @@ function curveSpeed(route, from, speed) {
   return limit;
 }
 
+function signedOffset(car, near) {
+  return (
+    (car.x - near.x) * Math.cos(near.heading) +
+    (car.z - near.z) * Math.sin(near.heading)
+  );
+}
+
 /**
  * Local Full Self-Driving controller.
  *
  * It uses only observations already available in the simulation: the planned
  * route, the road/speed rules, and the observed traffic. No network request,
  * API key or model response is needed for the car to drive itself.
+ *
+ * If the car has left the route (a missed turn, a late engagement), it asks
+ * the simulation to splice a new path through the next intersection and then
+ * follows that path. It will not cut through buildings to rejoin a stale plan.
  */
 export class FullSelfDriving {
   constructor(sim) {
@@ -107,44 +120,66 @@ export class FullSelfDriving {
       return;
     }
     this.decisions++;
-    const route = car.route;
-    const near = nearestOnPath(car, route.points);
+
+    let route = car.route;
+    let near = nearestOnPath(car, route.points);
+    const headingError = Math.abs(angle(near.heading - car.heading));
+    // Missed the planned turn, or engaged while off the line: pick up at the
+    // next intersection instead of diving through a block toward the old path.
+    if (near.distance > 5.5 || headingError > 0.85) sim.forceReroute?.();
+    route = car.route;
+    near = nearestOnPath(car, route.points);
+
     const maneuver = { lane_offset_m: 0, lookahead_m: 6, stop_at_line: null };
     let target = Math.min(sim.world.theme.limit, routeSpeedLimit(car, near.s));
     this.stopDistance = null;
     this.recovering = false;
     this.reason = "Cruising";
 
-    // Pure pursuit follows the route centreline rather than a fixed heading,
-    // so turns, ramps and U-turn arcs are tracked with the same controller.
-    maneuver.lookahead_m = clamp(4 + Math.abs(car.speed) * 0.7, 5, 16);
+    const speed = Math.abs(car.speed);
+    maneuver.lookahead_m = clamp(3.8 + speed * 0.62, 4.5, 15);
+    if (near.distance > 1.4) maneuver.lookahead_m = Math.max(4.2, maneuver.lookahead_m * 0.72);
     target = Math.min(target, curveSpeed(route, near.s, car.speed));
 
-    if (
+    const buildings = sim.world.objects.filter((o) => o.type === "building");
+    const offRoute =
       near.distance > RECOVERY_DISTANCE_M ||
-      Math.abs(angle(near.heading - car.heading)) > 1.2
-    ) {
+      Math.abs(angle(near.heading - car.heading)) > 1.15;
+
+    if (offRoute) {
       this.recovering = true;
-      this.reason = "Returning to route";
-      const goalS = clamp(near.s + 7, 0, route.length);
+      const goalS = clamp(near.s + 8, 0, route.length);
       const goal = pointAt(route.points, goalS);
-      const headingError = angle(heading(car, goal) - car.heading);
+      const toGoal = heading(car, goal);
       const range = Math.max(2, dist(car, goal));
-      const curvature = (2 * Math.sin(headingError)) / range;
-      const steer = steeringForCurvature(curvature, RECOVERY_SPEED);
-      const obstacles = [
-        ...sim.world.objects.filter((o) => o.type === "building"),
-        ...sim.traffic,
-        ...sim.pedestrians,
-      ];
-      // Reverse only when the rejoin point is behind us and backing into it is
-      // clear; otherwise continue forward around the obstacle.
-      const reverse =
-        Math.abs(headingError) > 2 &&
-        range < 14 &&
-        !recoveryBlocked(car, -steer, -RECOVERY_SPEED, obstacles);
-      maneuver.direct_steering = reverse ? -steer : steer;
-      target = reverse ? -RECOVERY_SPEED : RECOVERY_SPEED;
+      const blocked = blockedByBuilding(car, goal, buildings);
+      const obstacles = [...buildings, ...sim.traffic, ...sim.pedestrians];
+
+      if (blocked || range > 28) {
+        // Stay on the asphalt we are already on. The rerouter will splice a
+        // legal path through the next junction; cutting a corner hits a wall.
+        this.reason = "Holding the road";
+        const laneHeading = near.heading;
+        const keep = angle(laneHeading - car.heading);
+        const pull = clamp(-signedOffset(car, near) * 0.18, -0.45, 0.45);
+        maneuver.direct_steering = clamp(keep * 0.9 + pull, -0.7, 0.7);
+        target = Math.min(Math.max(2.4, speed * 0.7), HOLD_ROAD_SPEED);
+      } else {
+        this.reason = "Returning to route";
+        const headingToGoal = angle(toGoal - car.heading);
+        const curvature = (2 * Math.sin(headingToGoal)) / range;
+        const steer = steeringForCurvature(curvature, RECOVERY_SPEED);
+        const reverse =
+          Math.abs(headingToGoal) > 2.15 &&
+          range < 12 &&
+          !recoveryBlocked(car, -steer, -RECOVERY_SPEED, obstacles);
+        maneuver.direct_steering = reverse ? -steer : steer;
+        target = reverse ? -RECOVERY_SPEED : RECOVERY_SPEED;
+      }
+    } else {
+      // Nudge the pursuit point toward the lane centre so Autosteer sits
+      // between the two blue lines instead of hunting the centreline.
+      maneuver.lane_offset_m = clamp(-signedOffset(car, near) * 0.28, -0.9, 0.9);
     }
 
     // Controls are advisory observations. The legal stop is made by this

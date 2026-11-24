@@ -78,8 +78,7 @@ const sim = new Simulation(
   Number(params.get("seed")) || Math.floor(Math.random() * 999999),
   THEMES[type] ? type : "city",
 );
-let playCredits = null,
-  loading = true,
+let loading = true,
   lastMapDraw = 0;
 showLoading("Loading car and scenery…");
 let configured = false,
@@ -117,12 +116,11 @@ $("app").innerHTML = `
 <div id="minimap" class="minimap glass"><div class="minimap-toolbar" role="toolbar" aria-label="Minimap controls"><button id="map-drag" aria-label="Move minimap" title="Move minimap · drag or use arrow keys">${icon("grip")}</button><div><button id="map-zoom-out" aria-label="Zoom out" title="Zoom out">${icon("minus")}</button><button id="map-zoom-in" aria-label="Zoom in" title="Zoom in">${icon("plus")}</button><button id="map-reset" aria-label="Reset minimap" title="Reset map position, zoom and following">${icon("rotate-ccw")}</button></div></div><canvas id="map-canvas" width="380" height="310" aria-label="Route map. Drag to pan, scroll to zoom, double-click to follow the car."></canvas></div></div>
 <div id="paused-overlay" hidden><div class="glass"><span>${icon("pause")} Paused</span><button id="resume" class="primary">Resume driving</button></div></div>
 <div id="arrival" class="arrival glass" hidden><span class="arrival-mark">${icon("flag")}</span><span class="eyebrow">DESTINATION REACHED</span><h1>You made it.</h1><p id="arrival-summary"></p><button id="next-trip" class="primary">Next drive ${icon("arrow-up-right")}</button><button id="keep-driving" class="subtle">Keep exploring</button></div>
-<div class="bottom-hud"><div class="driver-dock glass"><div class="speed-cluster"><div title="Current speed"><strong id="speed">0</strong><span>km/h</span></div><span class="speed-limit" title="Speed limit"><small>LIMIT</small><b id="speed-limit">50</b></span></div><span class="dock-divider"></span><div class="pilot-actions"><button id="fsd-toggle" class="pilot-button fsd-button" role="switch" aria-checked="false" aria-label="Full self-driving" title="Engage local FSD · F">${icon("car-front")}<span id="fsd-label">Engage FSD</span><kbd>F</kbd></button><button id="candidates-toggle" class="candidate-button" aria-label="Show steering candidates" aria-pressed="false" title="Show steering candidates"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 20V3m-3 3 3-3 3 3M12 20C12 14 7 12 3 8m0 3V8h3M12 20c0-6 5-8 9-12m-3 0h3v3"/><circle cx="12" cy="21" r="1" fill="currentColor" stroke="none"/></svg></button></div><div id="decision-status"><span id="pilot-state">Free play</span><span id="context-message">WASD to drive · Space to brake</span><span class="cost-total" title="Estimated cost from Jev-reported token usage and configured pricing."><span id="cost-label">Session</span> <strong id="cost">$0.000000</strong></span></div><span class="dock-divider"></span><div class="dock-tools" role="group" aria-label="View and driving controls"><button id="camera" title="Change camera · C" aria-label="Change camera">${icon("video")}<span id="camera-name">Chase</span></button><button id="scene-json" aria-label="Inspect live JSON" title="Inspect live JSON">${icon("braces")}</button><button id="fullscreen" aria-label="Enter fullscreen" title="Fullscreen">${icon("maximize")}</button><span class="divider"></span><button id="pause" aria-label="Pause simulation" title="Pause · P">${icon("pause")}</button><button id="sign-out" hidden aria-label="Sign out" title="Sign out">${icon("log-out")}</button></div></div></div>
+<div class="bottom-hud"><div class="driver-dock glass"><div class="speed-cluster"><div title="Current speed"><strong id="speed">0</strong><span>km/h</span></div><span class="speed-limit" title="Speed limit"><small>LIMIT</small><b id="speed-limit">50</b></span></div><span class="dock-divider"></span><div class="pilot-actions"><button id="fsd-toggle" class="pilot-button fsd-button" role="switch" aria-checked="false" aria-label="Full self-driving" title="Engage local FSD · F">${icon("car-front")}<span id="fsd-label">Engage FSD</span><kbd>F</kbd></button><button id="candidates-toggle" class="candidate-button" aria-label="Show steering candidates" aria-pressed="false" title="Show steering candidates"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 20V3m-3 3 3-3 3 3M12 20C12 14 7 12 3 8m0 3V8h3M12 20c0-6 5-8 9-12m-3 0h3v3"/><circle cx="12" cy="21" r="1" fill="currentColor" stroke="none"/></svg></button></div><div id="decision-status"><span id="pilot-state">Free play</span><span id="context-message">WASD to drive · Space to brake</span></div><span class="dock-divider"></span><div class="dock-tools" role="group" aria-label="View and driving controls"><button id="camera" title="Change camera · C" aria-label="Change camera">${icon("video")}<span id="camera-name">Chase</span></button><button id="scene-json" aria-label="Inspect live JSON" title="Inspect live JSON">${icon("braces")}</button><button id="fullscreen" aria-label="Enter fullscreen" title="Fullscreen">${icon("maximize")}</button><span class="divider"></span><button id="pause" aria-label="Pause simulation" title="Pause · P">${icon("pause")}</button><button id="sign-out" hidden aria-label="Sign out" title="Sign out">${icon("log-out")}</button></div></div></div>
 <dialog id="crash-dialog" aria-labelledby="crash-title" aria-describedby="crash-description"><span class="crash-symbol">${icon("x")}</span><span class="eyebrow">DRIVE ENDED</span><h1 id="crash-title">Game over.</h1><p id="crash-description"></p><div class="crash-stats"><div><strong id="crash-speed"></strong><span>km/h at impact</span></div><div><strong id="crash-distance"></strong><span>meters driven</span></div></div><button id="retry-drive" class="primary">${icon("rotate-ccw")} Restart drive</button><button id="crash-new-world" class="secondary">Try a new world ${icon("arrow-up-right")}</button></dialog>
-<dialog id="credit-dialog" aria-labelledby="credit-title"><span class="eyebrow">THANKS FOR TAKING A DRIVE</span><h2 id="credit-title">That's your free lap.</h2><p>Your $0.25 of Jev play credit has been used. You can keep exploring with manual controls.</p><button id="credit-close" class="primary">Keep driving manually</button><a href="https://standardagents.ai/" target="_blank" rel="noopener noreferrer">Explore Standard Agents ↗</a></dialog>
 <div id="toast" role="status" hidden></div>
 <dialog id="json-dialog"><div class="json-header"><div>${icon("braces")}<strong>Under the hood</strong><span id="json-live">LIVE · 4 Hz</span></div><button id="close-json" aria-label="Close JSON inspector">${icon("x")}</button></div><div class="json-toolbar"><div class="json-tabs"><button data-tab="request" class="active">Jev input</button><button data-tab="sensor">Perception</button><button data-tab="world">Full world</button><button data-tab="decision">Response</button></div><div class="json-actions"><button id="freeze-json">Freeze</button><button id="copy-json" aria-label="Copy displayed JSON">${icon("copy")} <span id="copy-json-label" aria-live="polite">Copy</span></button><button id="download-json">${icon("download")} Download</button></div></div><p id="json-description">Exact Jev API payload, including instructions and offered choices. Full geometry and control details stay local.</p><pre id="json-content"></pre></dialog>
-<dialog id="help-dialog"><button id="close-help" class="dialog-close" aria-label="Close help">${icon("x")}</button><span class="eyebrow">YOUR NEXT DRIVE</span><h2>Take the wheel.</h2><p class="touch-help">Use the thumbstick to steer. Push up to accelerate, pull down to brake and reverse. Release to coast; hold Brake to stop.</p><div class="help-keys"><span><kbd>W / ↑</kbd> Hold accelerator</span><span><kbd>S / ↓</kbd> Brake / reverse</span><span><kbd>A / D</kbd> Steer</span><span><kbd>SPACE</kbd> Brake</span><span><kbd>F</kbd> Local FSD (no sign-in)</span><span><kbd>C</kbd> Camera</span><span><kbd>P</kbd> Pause</span><span><kbd>?</kbd> Keyboard help</span></div><p>Drag the scene to orbit in Chase or Bird’s eye; drag to look around in Driver or First person view. First person puts you in the driver’s seat with a live Tesla-style center screen on the dash: parked it shows the car view with media and navigate cards; while driving it shows speed, power, traffic, speed limit and navigation. Scroll to zoom outside; double-click to recenter. Tap A/D for small corrections; hold for a sharper turn and release to recenter. Hold W to accelerate; release to coast with drag. S brakes, then reverses once stopped. Space applies the brake. Autopilot sets target speed directly.</p><p>The bright blue line is the active driving plan on the road ahead. Use Candidates to see the sampled paths: forward in blue/cyan, reverse in purple, lane departures in amber, and predicted collisions in orange. Choice probabilities are available in the JSON inspector. The safety brake can reduce speed for a missed hazard; safety interventions are reported in the drive status.</p><p class="asset-credits">Vehicle: <a href="https://sketchfab.com/3d-models/tesla-model-y-2021-c0a86cac582d4b33aba0fb1b1912d970" target="_blank" rel="noreferrer">Tesla Model Y 2021</a> by 763468712, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>. Geometry adapted by Tina 3D Tesla; optimized, re-materialed, and wheel-rigged for JevPilot. Tree, shrub, streetlight, surface textures and sky: <a href="https://polyhaven.com" target="_blank" rel="noreferrer">Poly Haven</a>, CC0.</p><p>Driving keys take back control. Use the JSON button for live inputs, full world state, probabilities, and session telemetry.</p></dialog>`;
+<dialog id="help-dialog"><button id="close-help" class="dialog-close" aria-label="Close help">${icon("x")}</button><span class="eyebrow">YOUR NEXT DRIVE</span><h2>Take the wheel.</h2><p class="touch-help">Use the thumbstick to steer. Push up to accelerate, pull down to brake and reverse. Release to coast; hold Brake to stop.</p><div class="help-keys"><span><kbd>W / ↑</kbd> Hold accelerator</span><span><kbd>S / ↓</kbd> Brake / reverse</span><span><kbd>A / D</kbd> Steer</span><span><kbd>SPACE</kbd> Brake</span><span><kbd>F</kbd> Local FSD (no sign-in)</span><span><kbd>C</kbd> Camera</span><span><kbd>P</kbd> Pause</span><span><kbd>?</kbd> Keyboard help</span></div><p>Drag the scene to orbit in Chase or Bird’s eye; drag to look around in Driver or First person view. First person puts you in the driver’s seat with a live Tesla-style center screen on the dash: parked it shows the car view with radio and navigate cards; while driving it shows Autosteer, speed, power, traffic, speed limit, radio and navigation. Scroll to zoom outside; double-click to recenter. Tap A/D for small corrections; hold for a sharper turn and release to recenter. Hold W to accelerate; release to coast with drag. S brakes, then reverses once stopped. Space applies the brake. FSD is local Autosteer — if you miss a turn it picks up at the next intersection.</p><p>The two bright blue lines highlight the Autosteer lane on the road ahead. Use Candidates to see the sampled paths: forward in blue/cyan, reverse in purple, lane departures in amber, and predicted collisions in orange. Choice probabilities are available in the JSON inspector. The safety brake can reduce speed for a missed hazard; safety interventions are reported in the drive status.</p><p class="asset-credits">Vehicle: <a href="https://sketchfab.com/3d-models/tesla-model-y-2021-c0a86cac582d4b33aba0fb1b1912d970" target="_blank" rel="noreferrer">Tesla Model Y 2021</a> by 763468712, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>. Geometry adapted by Tina 3D Tesla; optimized, re-materialed, and wheel-rigged for JevPilot. Tree, shrub, streetlight, surface textures and sky: <a href="https://polyhaven.com" target="_blank" rel="noreferrer">Poly Haven</a>, CC0.</p><p>Driving keys take back control. Use the JSON button for live inputs, full world state, probabilities, and session telemetry.</p></dialog>`;
 $("app").insertAdjacentHTML(
   "beforeend",
   `
@@ -296,10 +294,6 @@ function setPilot(on) {
   if (on && sim.fsdActive) {
     setFSD(false);
     return setPilot(true);
-  }
-  if (on && playCredits?.exhausted) {
-    $("credit-dialog").showModal();
-    return;
   }
   // A static deployment has no Jev server. Fall back to the local driver
   // instead of interrupting the drive with an unavailable-service message.
@@ -532,7 +526,7 @@ document.querySelectorAll("[data-tab]").forEach(
         world:
           "All roads, buildings, vehicles, pedestrians, controls, and the current route.",
         decision:
-          "Actual Jev probabilities and token usage. Costs accumulate across every completed call.",
+          "Actual Jev probabilities and token usage from the optional hosted loop.",
       }[inspectorTab];
       renderJSON();
     }),
@@ -554,12 +548,6 @@ function inspectRequest(state) {
         resolved_locally: fixed,
       };
 }
-function updateCredits(credits) {
-  if (!credits) return;
-  playCredits = credits;
-  $("cost-label").textContent = "Play credit";
-}
-$("credit-close").onclick = () => $("credit-dialog").close();
 $("sign-out").onclick = async () => {
   setPilot(false);
   sim.paused = true;
@@ -575,15 +563,6 @@ $("sign-out").onclick = async () => {
     toast("Could not sign out. Please try again.", "error");
   }
 };
-function updateCostTooltip(pricing) {
-  const averages = tally.calls
-    ? `${Math.round(tally.input / tally.calls).toLocaleString()} input tokens/call · ${(tally.request_bytes / tally.calls / 1024).toFixed(1)} KB/call. `
-    : "";
-  tooltips.set(
-    document.querySelector(".cost-total"),
-    `${playCredits ? "Remaining from your one-time $0.25 allowance. " : ""}${averages}Estimated from Jev-reported tokens at $${pricing.input_per_million}/M input and $${pricing.output_per_million}/M output.`,
-  );
-}
 function inspectData() {
   if (inspectorTab === "request") {
     if (
@@ -722,7 +701,6 @@ async function decide() {
         signal: AbortSignal.timeout(12000),
       }),
       data = await res.json();
-    updateCredits(data.credits);
     if (res.status === 401 && authRequired) {
       setPilot(false);
       location.assign("/login");
@@ -730,7 +708,7 @@ async function decide() {
     }
     if (res.status === 402 && authRequired) {
       setPilot(false);
-      $("credit-dialog").showModal();
+      toast("Hosted Jev is unavailable. Local FSD is still ready.", "error");
       return;
     }
     if (!res.ok) throw Error(data.error || "Jev request failed");
@@ -741,7 +719,6 @@ async function decide() {
     tally.cost += data.cost_usd;
     tally.input += data.usage.input_tokens;
     tally.output += data.usage.output_tokens;
-    updateCostTooltip(data.pricing);
     tally.latencies.push(data.latency_ms);
     if (tally.latencies.length > 25) tally.latencies.shift();
     if (
@@ -1040,9 +1017,6 @@ function updateUI() {
     $("context-message").textContent = sim.lastPlan.road.on_road
       ? "Returning to the route"
       : "Finding a way back onto the road";
-  $("cost").textContent = playCredits
-    ? `$${Math.max(0, playCredits.remaining_usd).toFixed(4)}`
-    : `$${tally.cost.toFixed(6)}`;
   if (sim.complete && !sim.freeExplore) {
     $("arrival").hidden = false;
     $("arrival-summary").textContent =
@@ -1148,11 +1122,9 @@ fetch("/api/status", { credentials: "same-origin" })
     // when the driver asks for the hosted Jev decision loop.
     if (authRequired && data.authenticated !== true)
       $("sign-out").hidden = true;
-    updateCredits(data.credits);
     $("sign-out").hidden = !data.authenticated;
     if (data.user) tooltips.set($("sign-out"), `Sign out · ${data.user.email}`);
     configured = data.configured;
-    updateCostTooltip(data.pricing);
     // Jev is optional. FSD is local, so a missing status endpoint is silent.
   })
   .catch(() => {

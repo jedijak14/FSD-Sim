@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Simulation } from "../src/simulation.js";
-import { angle, nearestOnPath, pointAt } from "../src/math.js";
+import { angle, dist, heading, move, nearestOnPath, pointAt } from "../src/math.js";
 
 function driveToEnd(world, seed, limit = 12000) {
   const sim = new Simulation(seed, world);
@@ -91,4 +91,38 @@ test("FSD follows the route centreline and can be taken over manually", () => {
   sim.pedals.brake = 1;
   for (let tick = 0; tick < 40; tick++) sim.step(0.05);
   assert(Math.abs(sim.player.speed) < 0.1, "manual brake did not take over");
+});
+
+test("FSD picks up at the next intersection after a missed turn instead of crashing", () => {
+  const sim = new Simulation(42, "town");
+  sim.traffic = [];
+  sim.pedestrians = [];
+  const car = sim.player;
+  const turn = car.route.crossings.find((c) => {
+    const delta = Math.abs(angle(c.exit - c.approach));
+    if (delta < 0.7 || delta > 2.4) return false;
+    const node = sim.world.byId[c.nodeId];
+    return node.neighbors.some((id) => {
+      const n = sim.world.byId[id];
+      return Math.abs(angle(heading(node, n) - c.approach)) < 0.3 && dist(node, n) > 40;
+    });
+  });
+  assert(turn, "test route needs a left/right turn with a road continuing straight");
+  const past = move(turn, turn.approach, 22);
+  Object.assign(car, move(past, turn.approach + Math.PI / 2, 3));
+  car.heading = turn.approach;
+  car.speed = 7;
+  car.target = 7;
+  car.s = turn.stopS + 22;
+  const version = sim.routeVersion;
+  sim.setDriverMode("fsd");
+  assert(sim.routeVersion > version, "engaging FSD off-route must splice a new path");
+  for (let tick = 0; tick < 900 && !sim.complete && !sim.crash; tick++) sim.step(0.05);
+  assert.equal(sim.crash, null, "FSD crashed after a missed turn");
+  const near = nearestOnPath(car, car.route.points);
+  assert(near.distance < 4, `not on the new lane (${near.distance.toFixed(2)} m)`);
+  assert(
+    Math.abs(angle(car.heading - near.heading)) < 0.7,
+    "heading did not align with the replacement route",
+  );
 });

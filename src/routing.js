@@ -62,7 +62,7 @@ export function routesFromLocation(
       return { edge, distance: near.distance };
     })
     .sort((a, b) => a.distance - b.distance)
-    .slice(0, 6);
+    .slice(0, 10);
   const candidates = [],
     seen = new Set();
   for (const { edge } of edges) {
@@ -99,11 +99,15 @@ export function routesFromLocation(
         if (entry.length < 2) continue;
         const near = nearestOnPath(car, entry);
         const relativeHeading = angle(near.heading - car.heading);
+        // Prefer continuing forward to the next intersection after a missed
+        // turn. A U-turn back to the original corner is a last resort.
+        const reverse = Math.abs(relativeHeading) > 1.7 ? 55 : 0;
         const score =
-          near.distance * 5 +
-          Math.abs(relativeHeading) * 9 +
-          (route.length - near.s) * 0.025 +
-          (blockedByBuilding(car, near, buildings) ? 80 : 0);
+          near.distance * 4 +
+          Math.abs(relativeHeading) * 16 +
+          (route.length - near.s) * 0.012 +
+          (blockedByBuilding(car, near, buildings) ? 90 : 0) +
+          reverse;
         const start = Math.max(0, near.s - 3);
         route.points = [
           pointAt(route.points, start),

@@ -385,6 +385,112 @@ function drawAppIcon(ctx, x, y, bg, glyph, fg = "#ffffff") {
   txt(ctx, glyph, x, y + 1, 20, fg, 700, "center");
 }
 
+const STATIONS = [
+  {
+    name: "Tesla Radio",
+    freq: "Live",
+    color: ["#3e6ae1", "#1a2f7a"],
+    tracks: [
+      ["Midnight City", "M83"],
+      ["Sunset Mission", "Kavinsky"],
+      ["A Moment Apart", "ODESZA"],
+    ],
+  },
+  {
+    name: "Energy 98.7",
+    freq: "98.7 FM",
+    color: ["#ff5a36", "#8a1408"],
+    tracks: [
+      ["Blinding Lights", "The Weeknd"],
+      ["Levitating", "Dua Lipa"],
+      ["As It Was", "Harry Styles"],
+    ],
+  },
+  {
+    name: "KEXP 90.3",
+    freq: "90.3 FM",
+    color: ["#ffb703", "#7a4a00"],
+    tracks: [
+      ["The Less I Know The Better", "Tame Impala"],
+      ["Holocene", "Bon Iver"],
+      ["Electric Feel", "MGMT"],
+    ],
+  },
+  {
+    name: "Jazz 88",
+    freq: "88.3 FM",
+    color: ["#7b5ea7", "#2b1a4a"],
+    tracks: [
+      ["So What", "Miles Davis"],
+      ["Take Five", "Dave Brubeck"],
+      ["Autumn Leaves", "Cannonball Adderley"],
+    ],
+  },
+  {
+    name: "NPR News",
+    freq: "91.5 FM",
+    color: ["#1a7a5c", "#063328"],
+    tracks: [
+      ["Morning Edition", "NPR"],
+      ["All Things Considered", "NPR"],
+      ["Fresh Air", "Terry Gross"],
+    ],
+  },
+];
+
+function radioNow(state) {
+  if (state.radio) return state.radio;
+  const elapsed = (state.now ?? Date.now() / 1000) * 1000;
+  const station = STATIONS[Math.floor(elapsed / 180000) % STATIONS.length];
+  const track = station.tracks[Math.floor(elapsed / 45000) % station.tracks.length];
+  return {
+    station: station.name,
+    freq: station.freq,
+    color: station.color,
+    track: track[0],
+    artist: track[1],
+    playing: state.paused ? false : true,
+    progress: ((elapsed / 45000) % 1),
+  };
+}
+
+function drawEQ(ctx, x, y, w, h, t, color = "#ffffff") {
+  const n = 8;
+  const gap = 2;
+  const bw = (w - gap * (n - 1)) / n;
+  ctx.fillStyle = color;
+  for (let i = 0; i < n; i++) {
+    const wave =
+      0.28 +
+      0.72 *
+        Math.abs(
+          Math.sin(t * 2.1 + i * 0.7) * 0.6 + Math.sin(t * 3.4 + i * 1.3) * 0.4,
+        );
+    const bh = Math.max(3, h * wave);
+    ctx.fillRect(x + i * (bw + gap), y + h - bh, bw, bh);
+  }
+}
+
+function drawRadioIcon(ctx, x, y, s = 1) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  ctx.strokeStyle = "#ffffff";
+  ctx.fillStyle = "#ffffff";
+  ctx.lineWidth = 2;
+  rr(ctx, -11, -6, 22, 14, 3);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-6, -6);
+  ctx.lineTo(4, -12);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(-4, 1, 2.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillRect(2, -1, 6, 2.4);
+  ctx.restore();
+}
+
 export class TeslaScreen {
   constructor() {
     this.canvas = document.createElement("canvas");
@@ -395,6 +501,7 @@ export class TeslaScreen {
     this.texture.colorSpace = THREE.SRGBColorSpace;
     this.texture.anisotropy = 4;
     this.last = "";
+    this.radioClock = 0;
     this.update({});
   }
 
@@ -418,6 +525,8 @@ export class TeslaScreen {
     const traffic = state.traffic || [];
     const driving = gear !== "P" || speedKmh >= 1;
     const timeStr = state.timeStr || fmtTime();
+    const radio = radioNow(state);
+    this.radioClock += 0.1;
 
     // --- background ---
     const bg = ctx.createLinearGradient(0, 0, 0, H);
@@ -516,30 +625,35 @@ export class TeslaScreen {
       ctx.lineTo(cx + 46, bottom);
       ctx.closePath();
       ctx.fill();
-      // lane dashes converging
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 4;
-      ctx.setLineDash([16, 14]);
-      for (const off of [-22, 22]) {
+      // lane dashes (center)
+      ctx.strokeStyle = "rgba(255,255,255,0.55)";
+      ctx.lineWidth = 3;
+      ctx.setLineDash([14, 16]);
+      ctx.beginPath();
+      ctx.moveTo(cx, bottom);
+      ctx.lineTo(cx, top);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // Autosteer: two blue lines highlighting the lane, not a filled ribbon.
+      const skew = turn === "left" ? -70 : turn === "right" ? 70 : turn === "uturn" ? -110 : 0;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "rgba(47,157,255,0.28)";
+      ctx.lineWidth = 14;
+      for (const side of [-1, 1]) {
         ctx.beginPath();
-        ctx.moveTo(cx + off * 0.6, bottom);
-        ctx.lineTo(cx + off * 2.2, top);
+        ctx.moveTo(cx + side * 34 + skew * 0.15, bottom - 8);
+        ctx.lineTo(cx + side * 78 + skew, top + 8);
         ctx.stroke();
       }
-      ctx.setLineDash([]);
-      // route ribbon (skew by turn)
-      const skew = turn === "left" ? -70 : turn === "right" ? 70 : turn === "uturn" ? -110 : 0;
-      const routeGrad = ctx.createLinearGradient(0, top, 0, bottom);
-      routeGrad.addColorStop(0, "rgba(47,157,255,0.15)");
-      routeGrad.addColorStop(1, SKY);
-      ctx.fillStyle = routeGrad;
-      ctx.beginPath();
-      ctx.moveTo(cx - 20 + skew * 0.4, bottom);
-      ctx.lineTo(cx - 34 + skew, top);
-      ctx.lineTo(cx + 34 + skew, top);
-      ctx.lineTo(cx + 20 + skew * 0.4, bottom);
-      ctx.closePath();
-      ctx.fill();
+      ctx.strokeStyle = SKY;
+      ctx.lineWidth = 5;
+      for (const side of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(cx + side * 34 + skew * 0.15, bottom - 8);
+        ctx.lineTo(cx + side * 78 + skew, top + 8);
+        ctx.stroke();
+      }
+      ctx.lineCap = "butt";
       // traffic (top-view blobs)
       for (const t of traffic.slice(0, 8)) {
         const ahead = t.ahead ?? 0;
@@ -606,12 +720,22 @@ export class TeslaScreen {
       const arrow = turn === "left" ? "←" : turn === "right" ? "→" : turn === "uturn" ? "↓" : "↑";
       txt(ctx, `${arrow}  ${maneuver}`, cx, vy + 72, 20, INK, 700, "center");
       txt(ctx, `in ${turnDist} m · ${remaining >= 1000 ? `${(remaining / 1000).toFixed(1)} km` : `${Math.round(remaining)} m`} left · ~${eta} min`, cx, vy + 100, 16, GREY, 500, "center");
+      // Radio now-playing chip
+      ctx.fillStyle = "rgba(255,255,255,0.92)";
+      rr(ctx, vx + 22, vy + vh - 64, 280, 48, 12);
+      ctx.fill();
+      ctx.fillStyle = radio.color[0];
+      rr(ctx, vx + 30, vy + vh - 56, 32, 32, 8);
+      ctx.fill();
+      drawEQ(ctx, vx + 34, vy + vh - 50, 24, 20, this.radioClock, "#ffffff");
+      txt(ctx, radio.station, vx + 72, vy + vh - 46, 14, GREY, 600);
+      txt(ctx, radio.playing ? radio.track : "Paused", vx + 72, vy + vh - 28, 16, INK, 700);
     }
 
-    // --- bottom cards: media + navigate ---
+    // --- bottom cards: radio + navigate ---
     const cardY = 560;
     const cardH = 118;
-    // media card
+    // radio card
     const mx = 330;
     const mw = 360;
     ctx.fillStyle = "#ffffff";
@@ -621,30 +745,32 @@ export class TeslaScreen {
     rr(ctx, mx, cardY, mw, cardH, 12);
     ctx.fill();
     ctx.shadowColor = "transparent";
-    // album art
     const artGrad = ctx.createLinearGradient(mx + 14, cardY + 14, mx + 86, cardY + 66);
-    artGrad.addColorStop(0, "#7b5ea7");
-    artGrad.addColorStop(1, "#2b1a4a");
+    artGrad.addColorStop(0, radio.color[0]);
+    artGrad.addColorStop(1, radio.color[1]);
     ctx.fillStyle = artGrad;
     rr(ctx, mx + 14, cardY + 14, 72, 52, 8);
     ctx.fill();
-    txt(ctx, "♪", mx + 50, cardY + 41, 30, "#ffffff", 700, "center");
-    txt(ctx, "Vampire", mx + 100, cardY + 32, 21, INK, 700);
-    txt(ctx, "♫  Olivia Rodrigo", mx + 100, cardY + 56, 15, GREY, 500);
-    // progress
+    drawEQ(ctx, mx + 26, cardY + 22, 48, 36, this.radioClock, "#ffffff");
+    txt(ctx, radio.station, mx + 100, cardY + 26, 15, GREY, 600);
+    txt(ctx, radio.track, mx + 100, cardY + 48, 20, INK, 700);
+    txt(ctx, `${radio.artist}  ·  ${radio.freq}`, mx + 100, cardY + 70, 14, GREY, 500);
     ctx.fillStyle = "#e3e6ea";
-    rr(ctx, mx + 100, cardY + 72, mw - 130, 4, 2);
+    rr(ctx, mx + 100, cardY + 84, mw - 130, 4, 2);
     ctx.fill();
-    ctx.fillStyle = INK;
-    rr(ctx, mx + 100, cardY + 72, (mw - 130) * 0.35, 4, 2);
+    ctx.fillStyle = radio.playing ? INK : GREY;
+    rr(ctx, mx + 100, cardY + 84, (mw - 130) * radio.progress, 4, 2);
     ctx.fill();
-    // controls
-    const cy2 = cardY + 96;
-    drawPrev(ctx, mx + 60, cy2);
-    drawPlayPause(ctx, mx + 130, cy2, !paused);
-    drawNext(ctx, mx + 200, cy2);
-    txt(ctx, "≣", mx + 270, cy2, 20, GREY, 600, "center");
-    txt(ctx, "⌕", mx + 325, cy2, 20, GREY, 600, "center");
+    const cy2 = cardY + 104;
+    drawPrev(ctx, mx + 48, cy2);
+    drawPlayPause(ctx, mx + 118, cy2, radio.playing && !paused);
+    drawNext(ctx, mx + 188, cy2);
+    ctx.fillStyle = RED;
+    ctx.beginPath();
+    ctx.arc(mx + 250, cy2, 4, 0, Math.PI * 2);
+    ctx.fill();
+    txt(ctx, "LIVE", mx + 262, cy2, 13, RED, 700);
+    txt(ctx, radio.freq, mx + mw - 18, cy2, 13, GREY, 600, "right");
 
     // navigate card
     const nx = 710;
@@ -686,10 +812,10 @@ export class TeslaScreen {
     txt(ctx, "‹", 1015, dockY + 54, 26, "#ffffff", 600, "center");
     txt(ctx, String(tempF), 1055, dockY + 54, 34, "#ffffff", 600, "center");
     txt(ctx, "›", 1095, dockY + 54, 26, "#ffffff", 600, "center");
-    // app icons
+    // app icons — radio (TuneIn-style) sits in the media slot
     const apps = [
       ["#34c759", "☎"],
-      ["#ff9500", "♫"],
+      ["#ff2d55", "radio"],
       ["#0a84ff", "B"],
       ["#1db954", "♫"],
       ["#af52de", "◎"],
@@ -697,7 +823,23 @@ export class TeslaScreen {
       ["#64d2ff", "T"],
     ];
     apps.forEach(([bgc, glyph], i) => {
-      drawAppIcon(ctx, 360 + i * 62, dockY + 54, bgc, glyph);
+      const ax = 360 + i * 62;
+      const ay = dockY + 54;
+      if (glyph === "radio") {
+        ctx.fillStyle = bgc;
+        ctx.beginPath();
+        ctx.arc(ax, ay, 19, 0, Math.PI * 2);
+        ctx.fill();
+        drawRadioIcon(ctx, ax, ay, 0.85);
+        // active ring
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(ax, ay, 22, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        drawAppIcon(ctx, ax, ay, bgc, glyph);
+      }
     });
     // volume right
     txt(ctx, "‹", 1160, dockY + 54, 26, "#ffffff", 600, "center");

@@ -45,9 +45,9 @@ import { updateCourtesy } from "./courtesy.js";
 import { routeFromLocation, routesFromLocation } from "./routing.js";
 import { FullSelfDriving } from "./fsd.js";
 
-const REROUTE_DISTANCE_M = 30;
-const REROUTE_DELAY_S = 6;
-const REROUTE_COOLDOWN_S = 30;
+const REROUTE_DISTANCE_M = 8;
+const REROUTE_DELAY_S = 0.45;
+const REROUTE_COOLDOWN_S = 3.5;
 const PLAYER_STOP_DWELL_S = 0.6;
 
 export class Simulation {
@@ -176,7 +176,12 @@ export class Simulation {
     this.player.steering = 0;
     this.player.steeringProgress = 0;
     this.player.target = 0;
-    if (this.fsdActive) this.fsd.reset();
+    if (this.fsdActive) {
+      this.fsd.reset();
+      // Engaging off the plan (a missed turn, a late handoff) must pick up at
+      // the next intersection immediately — waiting to drift off-road crashes.
+      this.forceReroute({ immediate: true });
+    }
     return true;
   }
   spawnTraffic(i, distant = false) {
@@ -737,6 +742,33 @@ export class Simulation {
       this.event("Destination reached. Nicely driven.", "success");
     }
   }
+  /**
+   * Splice a legal path from the current pose through the next intersection
+   * to the original destination. Used when FSD is engaged after a missed turn
+   * so the car continues on the road instead of cutting a corner into a wall.
+   */
+  forceReroute({ immediate = false } = {}) {
+    if (this.complete || this.freeExplore || this.crash) return false;
+    if (!immediate && this.time - this.lastReroute < 1.6) return false;
+    const v = this.player;
+    if (!v.route?.points?.length) return false;
+    const near = nearestOnPath(v, v.route.points);
+    const headingError = Math.abs(angle(near.heading - v.heading));
+    if (near.distance < 5.5 && headingError < 0.7) return false;
+    const next = routeFromLocation(
+      this.world,
+      v,
+      this.destinationApproach,
+      this.destinationPoint,
+    );
+    if (!next) return false;
+    if (
+      next.route.ids.join(",") === v.route.ids.join(",") &&
+      near.distance < 12
+    )
+      return false;
+    return this.installRoute(next, true);
+  }
   rerouteIfNeeded() {
     if (
       this.complete ||
@@ -745,7 +777,7 @@ export class Simulation {
       this.time < this.nextRouteCheck
     )
       return;
-    this.nextRouteCheck = this.time + 0.75;
+    this.nextRouteCheck = this.time + (this.fsdActive ? 0.25 : 0.55);
     const v = this.player,
       near = nearestOnPath(v, v.route.points);
     // Keep the route through turns, queues, and recovery on the same street.
@@ -757,6 +789,10 @@ export class Simulation {
       return;
     }
     this.offRouteSince ??= this.time;
+    if (this.fsdActive) {
+      this.forceReroute({ immediate: this.time - this.lastReroute > 2 });
+      return;
+    }
     if (!this.routeChoiceNeeded()) return;
     if (this.requestReroute) {
       this.nextRouteCheck = this.time + 4;
@@ -775,9 +811,9 @@ export class Simulation {
     if (next.route.ids.join(",") === v.route.ids.join(",")) return;
     this.installRoute(next);
   }
-  installRoute(next) {
+  installRoute(next, force = false) {
     // A background calculation or Jev response may arrive after we rejoin.
-    if (!this.routeChoiceNeeded()) return false;
+    if (!force && !this.routeChoiceNeeded()) return false;
     const v = this.player;
     const previousControl = this.crossingFor(v);
     const served = previousControl && v.stops[previousControl.nodeId];
@@ -793,7 +829,7 @@ export class Simulation {
       v.stops[newControl.nodeId] = served;
     v.amber = null;
     v.maneuver = null;
-    v.target = 0;
+    if (!this.fsdActive) v.target = 0;
     for (const [id, lock] of this.locks)
       if (lock.id === v.id) this.locks.delete(id);
     for (const [id, grant] of this.courtesy)

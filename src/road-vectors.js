@@ -5,6 +5,18 @@ import {
   candidateName,
   vectorWeights,
 } from "./planning.js";
+import { heading, move } from "./math.js";
+
+const LANE_HALF_M = 1.75;
+
+function offsetPath(points, lateral) {
+  return points.map((p, i) => {
+    const before = points[Math.max(0, i - 1)];
+    const after = points[Math.min(points.length - 1, i + 1)];
+    const h = p.heading ?? heading(before, after);
+    return move(p, h + Math.PI / 2, lateral);
+  });
+}
 
 function ribbon() {
   const geometry = new THREE.BufferGeometry();
@@ -150,7 +162,18 @@ export class RoadVectors {
     });
     this.selected = ribbon();
     this.selectedGlow = ribbon();
-    this.group.add(this.selectedGlow, this.selected);
+    this.laneLeft = ribbon();
+    this.laneLeftGlow = ribbon();
+    this.laneRight = ribbon();
+    this.laneRightGlow = ribbon();
+    this.group.add(
+      this.selectedGlow,
+      this.selected,
+      this.laneLeftGlow,
+      this.laneLeft,
+      this.laneRightGlow,
+      this.laneRight,
+    );
     this.clear();
   }
   setCandidates(plan) {
@@ -194,8 +217,14 @@ export class RoadVectors {
     this.group.visible = visible;
     this.layer.hidden = !visible;
     if (!visible) return;
+    const showAutosteer = hasGuidance;
     this.selected.visible = this.selectedGlow.visible =
-      this.enabled && (!!chosen || hasGuidance);
+      this.enabled && !!chosen && !showAutosteer;
+    this.laneLeft.visible =
+      this.laneLeftGlow.visible =
+      this.laneRight.visible =
+      this.laneRightGlow.visible =
+        showAutosteer;
     const plan = chosen ? this.answeredPlan : this.plan;
     for (const mesh of this.group.children) {
       mesh.material.uniforms.ego.value.set(car.x, car.z, car.heading);
@@ -203,14 +232,28 @@ export class RoadVectors {
         car.width / 2 + 0.12,
         car.depth / 2 + 0.15,
       );
+      mesh.material.uniforms.time.value += dt;
     }
     let selectedPoints = null;
     if (hasGuidance) {
-      updateRibbon(this.selected, guidance, 0.2, 0.25);
-      updateRibbon(this.selectedGlow, guidance, 0.5, 0.195);
-      this.selected.material.uniforms.alpha.value = 0.9;
-      this.selectedGlow.material.uniforms.alpha.value = 0.15;
-      this.selected.renderOrder = 5;
+      // Autosteer: two blue lines on the lane edges, not a single centreline.
+      const left = offsetPath(guidance, -LANE_HALF_M);
+      const right = offsetPath(guidance, LANE_HALF_M);
+      for (const [line, glow, path] of [
+        [this.laneLeft, this.laneLeftGlow, left],
+        [this.laneRight, this.laneRightGlow, right],
+      ]) {
+        updateRibbon(line, path, 0.07, 0.26);
+        updateRibbon(glow, path, 0.22, 0.2);
+        line.material.uniforms.tint.value.set("#2f9dff");
+        glow.material.uniforms.tint.value.set("#5eb8ff");
+        line.material.uniforms.alpha.value = 0.95;
+        glow.material.uniforms.alpha.value = 0.22;
+        line.material.uniforms.pulse.value = 1;
+        glow.material.uniforms.pulse.value = 0.45;
+        line.renderOrder = 5;
+        glow.renderOrder = 4;
+      }
     }
     if (chosen && this.enabled) {
       const candidate = this.answeredPlan.vectors[this.answer.choice];
